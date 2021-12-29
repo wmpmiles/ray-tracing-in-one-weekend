@@ -104,13 +104,22 @@ pub mod vec3 {
         pub fn reflect(self, normal: Vec3) -> Vec3 {
             self - normal.scalar_mul(2.0 * self.dot(normal))
         }
+
+        pub fn refract(self, normal: Vec3, eta_over_eta_prime: f64) -> Vec3 {
+            let cos_theta = (-normal).dot(self);
+            let r_in_perp = self + normal.scalar_mul(cos_theta);
+            let r_out_perp = r_in_perp.scalar_mul(eta_over_eta_prime);
+            let parallel_len = (1.0 - r_out_perp.quadrature()).sqrt();
+            let r_out_parallel = -(normal.scalar_mul(parallel_len));
+            r_out_perp + r_out_parallel
+        }
     }
 
     impl std::ops::Neg for Vec3 {
         type Output = Self;
 
         fn neg(self) -> Self::Output {
-            Vec3(-self.0, -self.1, self.2)
+            Vec3(-self.0, -self.1, -self.2)
         }
     }
 
@@ -478,26 +487,79 @@ pub mod material {
             scattered: &mut Ray,
         ) -> bool {
             if !rec.front_face {
-                return false
+                return false;
             }
-            
+
             let origin = rec.point;
 
             let reflection = ray_in.direction.unit_vector().reflect(rec.normal);
             let mut direction;
-            
+
             loop {
                 direction = reflection + Vec3::random_in_unit_sphere().scalar_mul(self.fuzz);
 
                 if direction.near_zero() || direction.dot(rec.normal) <= 0.0 {
-                    continue
+                    continue;
                 } else {
-                    break
+                    break;
                 }
             }
 
             *scattered = Ray { origin, direction };
             *attenuation = self.albedo;
+            true
+        }
+    }
+
+    pub struct Dielectric {
+        index_of_refraction: f64,
+    }
+
+    impl Dielectric {
+        pub fn new(index_of_refraction: f64) -> Self {
+            Dielectric {
+                index_of_refraction,
+            }
+        }
+
+        fn reflectance(cosine: f64, refractive_index: f64) -> f64 {
+            // Use Schlick's approximation for reflectance.
+            let mut r0 = (1.0 - refractive_index) / (1.0 + refractive_index);
+            r0 = r0 * r0;
+            r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
+        }
+    }
+
+    impl Material for Dielectric {
+        fn scatter(
+            &self,
+            ray_in: &Ray,
+            rec: &HitRecord,
+            attenuation: &mut Color,
+            scattered: &mut Ray,
+        ) -> bool {
+            *attenuation = Color::from_const(1.0, 1.0, 1.0);
+            let origin = rec.point;
+
+            let refraction_ratio = match rec.front_face {
+                true => 1.0 / self.index_of_refraction,
+                false => self.index_of_refraction,
+            };
+
+            let unit_direction = ray_in.direction.unit_vector();
+            let cos_theta = rec.normal.dot(-unit_direction).clamp(-1.0, 1.0);
+            let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
+
+            let cannot_refract = refraction_ratio * sin_theta > 1.0;
+            let reflect = cannot_refract || 
+                Dielectric::reflectance(cos_theta, refraction_ratio) > rand::random();
+
+            let direction = match reflect {
+                true => unit_direction.reflect(rec.normal),
+                false => unit_direction.refract(rec.normal, refraction_ratio),
+            };
+
+            *scattered = Ray { origin, direction };
             true
         }
     }

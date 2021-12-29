@@ -4,14 +4,14 @@ use rtow::material::*;
 use rtow::object::*;
 use rtow::ray::Ray;
 use rtow::vec3::*;
-use std::rc::Rc;
-use std::path::Path;
 use std::fs::File;
 use std::io::BufWriter;
+use std::path::Path;
+use std::rc::Rc;
 
 fn main() {
     // Image
-    const FILENAME: &str = r"fullrender2.png";
+    const FILENAME: &str = r"fullrender4.png";
     const IMAGE_WIDTH: u32 = 1920;
     const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / Camera::ASPECT_RATIO) as u32;
     const IMAGE_SIZE: usize = (IMAGE_WIDTH * IMAGE_HEIGHT * 4) as usize;
@@ -35,9 +35,11 @@ fn main() {
     let material_ground: Rc<dyn Material> =
         Rc::new(Lambertian::new(Color::from_const(0.8, 0.8, 0.0)));
     let material_centre: Rc<dyn Material> =
-        Rc::new(Lambertian::new(Color::from_const(0.7, 0.3, 0.3)));
-    let material_left: Rc<dyn Material> = Rc::new(Metal::new(Color::from_const(0.8, 0.8, 0.8), 0.3));
-    let material_right: Rc<dyn Material> = Rc::new(Metal::new(Color::from_const(0.8, 0.6, 0.2), 1.0));
+        Rc::new(Lambertian::new(Color::from_const(0.1, 0.2, 0.5)));
+    let material_left: Rc<dyn Material> =
+        Rc::new(Dielectric::new(1.5));
+    let material_right: Rc<dyn Material> =
+        Rc::new(Metal::new(Color::from_const(0.8, 0.6, 0.2), 0.0));
 
     world.add(Rc::new(Sphere::from(
         Point3::from(0.0, -100.5, -1.0),
@@ -53,6 +55,11 @@ fn main() {
         Point3::from(-1.0, 0.0, -1.0),
         0.5,
         Rc::clone(&material_left),
+    )));
+    world.add(Rc::new(Sphere::from(
+        Point3::from(-1.0, 0.0, -1.0),
+        -0.4,
+        Rc::clone(&material_left)
     )));
     world.add(Rc::new(Sphere::from(
         Point3::from(1.0, 0.0, -1.0),
