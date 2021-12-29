@@ -11,7 +11,7 @@ use std::io::BufWriter;
 
 fn main() {
     // Image
-    const FILENAME: &str = r"fullrender1.png";
+    const FILENAME: &str = r"fullrender2.png";
     const IMAGE_WIDTH: u32 = 1920;
     const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / Camera::ASPECT_RATIO) as u32;
     const IMAGE_SIZE: usize = (IMAGE_WIDTH * IMAGE_HEIGHT * 4) as usize;
@@ -26,8 +26,6 @@ fn main() {
     let mut encoder = png::Encoder::new(w, IMAGE_WIDTH, IMAGE_HEIGHT);
     encoder.set_color(png::ColorType::Rgba);
     encoder.set_depth(png::BitDepth::Eight);
-    encoder.set_trns(vec!(0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8));
-    encoder.set_source_gamma(png::ScaledFloat::new(1.0 / 2.0));
     let mut writer = encoder.write_header().unwrap();
     let mut data: Vec<u8> = Vec::with_capacity(IMAGE_SIZE);
 
