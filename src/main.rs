@@ -36,8 +36,7 @@ fn main() {
         Rc::new(Lambertian::new(Color::from_const(0.8, 0.8, 0.0)));
     let material_centre: Rc<dyn Material> =
         Rc::new(Lambertian::new(Color::from_const(0.1, 0.2, 0.5)));
-    let material_left: Rc<dyn Material> =
-        Rc::new(Dielectric::new(1.5));
+    let material_left: Rc<dyn Material> = Rc::new(Dielectric::new(1.5));
     let material_right: Rc<dyn Material> =
         Rc::new(Metal::new(Color::from_const(0.8, 0.6, 0.2), 0.0));
 
@@ -59,7 +58,7 @@ fn main() {
     world.add(Rc::new(Sphere::from(
         Point3::from(-1.0, 0.0, -1.0),
         -0.4,
-        Rc::clone(&material_left)
+        Rc::clone(&material_left),
     )));
     world.add(Rc::new(Sphere::from(
         Point3::from(1.0, 0.0, -1.0),
