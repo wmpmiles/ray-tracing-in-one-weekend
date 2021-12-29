@@ -6,7 +6,7 @@ pub type Point3 = Vec3;
 
 impl Vec3 {
     pub const fn new() -> Vec3 {
-        Vec3(0_f64, 0_f64, 0_f64)
+        Vec3(0.0, 0.0, 0.0)
     }
     pub fn from(e0: f64, e1: f64, e2: f64) -> Vec3 {
         Vec3(e0, e1, e2)
@@ -177,3 +177,211 @@ impl std::ops::SubAssign for Vec3 {
         *self = Self(self.0 - other.0, self.1 - other.1, self.2 - other.2)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const UNIT_RANGE: std::ops::RangeInclusive<f64> = 0.9999999999..=1.0000000001;
+
+    fn nearly_equal(a: f64, b: f64) -> bool {
+        UNIT_RANGE.contains(&(a - b + 1.0))
+    }
+
+    #[test]
+    fn new() {
+        let new = Vec3::new();
+        assert_eq!(new.0, 0.0);
+        assert_eq!(new.1, 0.0);
+        assert_eq!(new.2, 0.0);
+    }
+
+    #[test]
+    fn from() {
+        let from = Vec3::from(0.3, 0.5, 0.8);
+        assert_eq!(from.0, 0.3);
+        assert_eq!(from.1, 0.5);
+        assert_eq!(from.2, 0.8);
+    }
+
+    #[test]
+    fn from_const() {
+        let from_const = Vec3::from_const(0.3, 0.5, 0.8);
+        assert_eq!(from_const.0, 0.3);
+        assert_eq!(from_const.1, 0.5);
+        assert_eq!(from_const.2, 0.8);
+    }
+
+    #[test]
+    fn scalar() {
+        let vec = Vec3::scalar(0.777);
+        assert_eq!(vec.0, 0.777);
+        assert_eq!(vec.1, 0.777);
+        assert_eq!(vec.2, 0.777);
+    }
+
+    fn test_range(range: std::ops::RangeInclusive<f64>, vec: Vec3) {
+        assert!(range.contains(&vec.0));
+        assert!(range.contains(&vec.1));
+        assert!(range.contains(&vec.2));
+    }
+
+    #[test]
+    fn random() {
+        let mut previous = Vec3::new();
+        for _ in 0..100 {
+            let vec = Vec3::random();
+            test_range(0.0..=1.0, vec);
+            assert_ne!(previous, vec);
+            previous = vec;
+        }
+    }
+
+    #[test]
+    fn random_range() {
+        let range1 = 10.0..=100.0;
+        let range2 = -100.0..=100.0;
+        let range3 = -10.0..=-9.0;
+        for _ in 0..100 {
+            test_range(range1.clone(), Vec3::random_range(range1.clone()));
+            test_range(range2.clone(), Vec3::random_range(range2.clone()));
+            test_range(range3.clone(), Vec3::random_range(range3.clone()));
+        }
+    }
+
+    #[test]
+    fn random_in_unit_sphere() {
+        let mut previous = Vec3::new();
+        for _ in 0..100 {
+            let vec = Vec3::random_in_unit_sphere();
+            assert!(vec.quadrature() <= 1.0);
+            assert_ne!(previous, vec);
+            previous = vec;
+        }
+    }
+
+    #[test]
+    fn random_unit_vector() {
+        let mut previous = Vec3::new();
+        for _ in 0..100 {
+            let vec = Vec3::random_unit_vector();
+            assert!(UNIT_RANGE.contains(&vec.length()));
+            assert_ne!(previous, vec);
+            previous = vec;
+        }
+    }
+
+    #[test]
+    fn random_in_hemisphere() {
+        let mut previous = Vec3::new();
+        for _ in 0..100 {
+            let normal = Vec3::random_unit_vector();
+            let vec = Vec3::random_in_hemisphere(normal);
+            assert!(vec.length() <= 1.0);
+            assert!(vec.dot(normal) >= 0.0);
+            assert_ne!(previous, vec);
+            previous = vec;
+        }
+    }
+
+    #[test]
+    fn length() {
+        assert_eq!(Vec3::new().length(), 0.0);
+
+        assert_eq!(Vec3::from_const(0.0, 0.0, 1.0).length(), 1.0);
+        assert_eq!(Vec3::from_const(0.0, 1.0, 0.0).length(), 1.0);
+        assert_eq!(Vec3::from_const(1.0, 0.0, 0.0).length(), 1.0);
+
+        assert_eq!(Vec3::from_const(0.0, 3.0, 4.0).length(), 5.0);
+        assert_eq!(Vec3::from_const(3.0, 0.0, 4.0).length(), 5.0);
+        assert_eq!(Vec3::from_const(3.0, 4.0, 0.0).length(), 5.0);
+        assert_eq!(Vec3::from_const(0.0, 5.0, 12.0).length(), 13.0);
+        assert_eq!(Vec3::from_const(5.0, 0.0, 12.0).length(), 13.0);
+        assert_eq!(Vec3::from_const(5.0, 12.0, 0.0).length(), 13.0);
+
+        assert_eq!(Vec3::from_const(1.0, 2.0, 2.0).length(), 3.0);
+        assert_eq!(Vec3::from_const(2.0, 3.0, 6.0).length(), 7.0);
+        assert_eq!(Vec3::from_const(4.0, 4.0, 7.0).length(), 9.0);
+        assert_eq!(Vec3::from_const(1.0, 4.0, 8.0).length(), 9.0);
+    }
+
+    #[test]
+    fn quadrature() {
+        assert_eq!(Vec3::new().quadrature(), 0.0);
+
+        assert_eq!(Vec3::from_const(0.0, 0.0, 1.0).quadrature(), 1.0);
+        assert_eq!(Vec3::from_const(0.0, 1.0, 0.0).quadrature(), 1.0);
+        assert_eq!(Vec3::from_const(1.0, 0.0, 0.0).quadrature(), 1.0);
+
+        assert_eq!(Vec3::from_const(0.0, 3.0, 4.0).quadrature(), 25.0);
+        assert_eq!(Vec3::from_const(3.0, 0.0, 4.0).quadrature(), 25.0);
+        assert_eq!(Vec3::from_const(3.0, 4.0, 0.0).quadrature(), 25.0);
+        assert_eq!(Vec3::from_const(0.0, 5.0, 12.0).quadrature(), 169.0);
+        assert_eq!(Vec3::from_const(5.0, 0.0, 12.0).quadrature(), 169.0);
+        assert_eq!(Vec3::from_const(5.0, 12.0, 0.0).quadrature(), 169.0);
+
+        assert_eq!(Vec3::from_const(1.0, 2.0, 2.0).quadrature(), 9.0);
+        assert_eq!(Vec3::from_const(2.0, 3.0, 6.0).quadrature(), 49.0);
+        assert_eq!(Vec3::from_const(4.0, 4.0, 7.0).quadrature(), 81.0);
+        assert_eq!(Vec3::from_const(1.0, 4.0, 8.0).quadrature(), 81.0);
+    }
+
+    #[test]
+    fn unit_vector() {
+        for _ in 0..100 {
+            let vec = Vec3::random().unit_vector();
+            assert!(UNIT_RANGE.contains(&vec.length()));
+        }
+    }
+
+    #[test]
+    fn scalar_mul() {
+        for _ in 0..100 {
+            let vec = Vec3::random();
+            let scalar: f64 = rand::random();
+            let mul = vec.scalar_mul(scalar);
+            assert!(nearly_equal(vec.length() * scalar.abs(), mul.length()));
+        }
+    }
+
+    #[test]
+    fn scalar_div() {
+        for _ in 0..100 {
+            let vec = Vec3::random();
+            let scalar: f64 = rand::random();
+            let div = vec.scalar_div(scalar);
+            assert!(nearly_equal(vec.length() / scalar.abs(), div.length()));
+        }
+    }
+
+    #[test]
+    fn dot() {
+
+    }
+
+    #[test]
+    fn cross() {
+
+    }
+
+    #[test]
+    fn elementwise() {
+
+    }
+
+    #[test]
+    fn near_zero() {
+
+    }
+
+    #[test]
+    fn reflect() {
+
+    }
+
+    #[test]
+    fn refract() {
+
+    }
+}
+
