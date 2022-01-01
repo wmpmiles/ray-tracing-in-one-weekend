@@ -5,6 +5,10 @@ pub struct Vec3(pub f64, pub f64, pub f64);
 pub type Point3 = Vec3;
 
 impl Vec3 {
+    pub const E0: Vec3 = Vec3 ( 1.0, 0.0, 0.0 );
+    pub const E1: Vec3 = Vec3 ( 0.0, 1.0, 0.0 );
+    pub const E2: Vec3 = Vec3 ( 0.0, 0.0, 1.0 );
+
     pub const fn new() -> Vec3 {
         Vec3(0.0, 0.0, 0.0)
     }
@@ -356,32 +360,36 @@ mod tests {
 
     #[test]
     fn dot() {
-
+        for _ in 0..100 {
+            let vec = Vec3::random();
+            assert_eq!(vec.dot(Vec3::new()), 0.0);
+            assert_eq!(vec.dot(Vec3::E0), vec.0);
+            assert_eq!(vec.dot(Vec3::E1), vec.1);
+            assert_eq!(vec.dot(Vec3::E2), vec.2);
+            assert_eq!(vec.dot(Vec3::scalar(1.0)), vec.0 + vec.1 + vec.2);
+            assert_eq!(
+                vec.dot(Vec3::from_const(1.0, 2.0, 3.0)),
+                1.0 * vec.0 + 2.0 * vec.1 + 3.0 * vec.2
+            );
+        }
     }
 
     #[test]
     fn cross() {
-
+        assert_eq!(Vec3::E0.cross(Vec3::E1), Vec3::E2);
+        assert_eq!(Vec3::E1.cross(Vec3::E2), Vec3::E0);
+        assert_eq!(Vec3::E0.cross(Vec3::E1), Vec3::E2);
     }
 
     #[test]
-    fn elementwise() {
-
-    }
+    fn elementwise() {}
 
     #[test]
-    fn near_zero() {
-
-    }
+    fn near_zero() {}
 
     #[test]
-    fn reflect() {
-
-    }
+    fn reflect() {}
 
     #[test]
-    fn refract() {
-
-    }
+    fn refract() {}
 }
-
