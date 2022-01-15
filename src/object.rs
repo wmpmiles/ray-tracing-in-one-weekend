@@ -15,11 +15,15 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn from(centre: Point3, radius: f64, material: Rc<dyn Material>) -> Sphere {
-        Sphere {
-            centre,
-            radius,
-            material,
+    pub fn from(centre: Point3, radius: f64, material: Rc<dyn Material>) -> Option<Sphere> {
+        let zero = radius == 0.0;
+        match zero {
+            true => None,
+            false => Some(Sphere {
+                centre,
+                radius,
+                material,
+            }),
         }
     }
 }
@@ -48,7 +52,7 @@ impl Object for Sphere {
 
         rec.t = root;
         rec.point = ray.at(rec.t);
-        let outward_normal = (rec.point - self.centre).scalar_div(self.radius);
+        let outward_normal = (rec.point - self.centre).scalar_div(self.radius).unwrap();
         rec.set_face_normal(ray, outward_normal);
         rec.material = Rc::clone(&self.material);
 
@@ -57,7 +61,7 @@ impl Object for Sphere {
 }
 
 pub struct ObjectList {
-    objects: Vec<Rc<dyn Object>>,
+    pub objects: Vec<Rc<dyn Object>>,
 }
 
 impl ObjectList {

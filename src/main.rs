@@ -11,12 +11,13 @@ use std::rc::Rc;
 
 fn main() {
     // Image
-    const FILENAME: &str = r"fullrender4.png";
-    const IMAGE_WIDTH: u32 = 1920;
-    const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / Camera::ASPECT_RATIO) as u32;
+    const FILENAME: &str = r"finalrender.png";
+    const ASPECT_RATIO: f64 = 3.0 / 2.0;
+    const IMAGE_WIDTH: u32 = 1200;
+    const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as u32;
     const IMAGE_SIZE: usize = (IMAGE_WIDTH * IMAGE_HEIGHT * 4) as usize;
 
-    const SAMPLES_PER_PIXEL: u32 = 100;
+    const SAMPLES_PER_PIXEL: u32 = 500;
     const MAX_DEPTH: u32 = 50;
 
     let path = Path::new(FILENAME);
@@ -30,44 +31,26 @@ fn main() {
     let mut data: Vec<u8> = Vec::with_capacity(IMAGE_SIZE);
 
     // World
-    let mut world = ObjectList::new();
+    let world = random_scene();
 
-    let material_ground: Rc<dyn Material> =
-        Rc::new(Lambertian::new(Color::from_const(0.8, 0.8, 0.0)));
-    let material_centre: Rc<dyn Material> =
-        Rc::new(Lambertian::new(Color::from_const(0.1, 0.2, 0.5)));
-    let material_left: Rc<dyn Material> = Rc::new(Dielectric::new(1.5));
-    let material_right: Rc<dyn Material> =
-        Rc::new(Metal::new(Color::from_const(0.8, 0.6, 0.2), 0.0));
-
-    world.add(Rc::new(Sphere::from(
-        Point3::from(0.0, -100.5, -1.0),
-        100.0,
-        Rc::clone(&material_ground),
-    )));
-    world.add(Rc::new(Sphere::from(
-        Point3::from(0.0, 0.0, -1.0),
-        0.5,
-        Rc::clone(&material_centre),
-    )));
-    world.add(Rc::new(Sphere::from(
-        Point3::from(-1.0, 0.0, -1.0),
-        0.5,
-        Rc::clone(&material_left),
-    )));
-    world.add(Rc::new(Sphere::from(
-        Point3::from(-1.0, 0.0, -1.0),
-        -0.4,
-        Rc::clone(&material_left),
-    )));
-    world.add(Rc::new(Sphere::from(
-        Point3::from(1.0, 0.0, -1.0),
-        0.5,
-        Rc::clone(&material_right),
-    )));
+    println!("{}", world.objects.len());
 
     // Camera
-    let camera = Camera::new();
+    let lookfrom = Point3::from_const(13.0, 2.0, 3.0);
+    let lookat = Point3::from_const(0.0, 0.0, 0.0);
+    let vup = Vec3::from_const(0.0, 1.0, 0.0);
+    let dist_to_focus = 10.0;
+    let aperture = 0.1;
+
+    let camera = Camera::new(
+        lookfrom,
+        lookat,
+        vup,
+        20.0,
+        ASPECT_RATIO,
+        aperture,
+        dist_to_focus,
+    );
 
     // Render
     for j in (0..IMAGE_HEIGHT).rev() {
@@ -117,9 +100,73 @@ fn ray_color(ray: &Ray, world: &dyn Object, depth: u32) -> Color {
             NONE
         }
     } else {
-        let unit_direction = ray.direction.unit_vector();
-        let t = 0.5 * (unit_direction.1 + 1.0);
+        let t = 0.5 * (ray.direction.1 + 1.0);
 
         ONE.scalar_mul(1.0 - t) + BASE.scalar_mul(t)
     }
+}
+
+fn random_scene() -> ObjectList {
+    let mut world = ObjectList::new();
+
+    let ground_material = Rc::new(Lambertian {
+        albedo: Color::from_const(0.5, 0.5, 0.5),
+    });
+    world.add(Rc::new(
+        Sphere::from(
+            Point3::from_const(0.0, -1000.0, 0.0),
+            1000.0,
+            ground_material,
+        )
+        .unwrap(),
+    ));
+
+    for a in -11..11 {
+        for b in -11..11 {
+            let a = f64::from(a);
+            let b = f64::from(b);
+
+            let choose_mat: f64 = rand::random();
+            let center = Point3::from(
+                a + 0.9 * rand::random::<f64>(),
+                0.2,
+                b + 0.9 * rand::random::<f64>() as f64,
+            );
+
+            if (center - Point3::from_const(4.0, 0.2, 0.0)).length() > 0.9 {
+                if choose_mat < 0.8 {
+                    // diffuse
+                    let albedo = Color::random() * Color::random();
+                    let material = Lambertian { albedo };
+                    let sphere = Sphere::from(center, 0.2, Rc::new(material)).unwrap();
+                    world.add(Rc::new(sphere));
+                } else if choose_mat < 0.95 {
+                    // metal
+                    let albedo = Color::random_range(0.5..=1.0);
+                    let fuzz = rand::random::<f64>() / 2.0;
+                    let material = Metal { albedo, fuzz };
+                    let sphere = Sphere::from(center, 0.2, Rc::new(material)).unwrap();
+                    world.add(Rc::new(sphere));
+                } else {
+                    let material = Dielectric::new(1.5);
+                    let sphere = Sphere::from(center, 0.2, Rc::new(material)).unwrap();
+                    world.add(Rc::new(sphere));
+                }
+            }
+        }
+    }
+
+    let material1 = Dielectric::new(1.5);
+    let material2 = Lambertian { albedo: Color::from_const(0.4, 0.2, 0.1) };
+    let material3 = Metal { albedo: Color::from_const(0.7, 0.6, 0.5), fuzz: 0.0 };
+
+    let sphere1 = Sphere::from(Point3::from_const(0.0, 1.0, 0.0), 1.0, Rc::new(material1)).unwrap();
+    let sphere2 = Sphere::from(Point3::from_const(-4.0, 1.0, 0.0), 1.0, Rc::new(material2)).unwrap();
+    let sphere3 = Sphere::from(Point3::from_const(4.0, 1.0, 0.0), 1.0, Rc::new(material3)).unwrap();
+
+    world.add(Rc::new(sphere1));
+    world.add(Rc::new(sphere2));
+    world.add(Rc::new(sphere3));
+
+    world
 }

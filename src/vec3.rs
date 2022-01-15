@@ -5,9 +5,9 @@ pub struct Vec3(pub f64, pub f64, pub f64);
 pub type Point3 = Vec3;
 
 impl Vec3 {
-    pub const E0: Vec3 = Vec3 ( 1.0, 0.0, 0.0 );
-    pub const E1: Vec3 = Vec3 ( 0.0, 1.0, 0.0 );
-    pub const E2: Vec3 = Vec3 ( 0.0, 0.0, 1.0 );
+    pub const E0: Vec3 = Vec3(1.0, 0.0, 0.0);
+    pub const E1: Vec3 = Vec3(0.0, 1.0, 0.0);
+    pub const E2: Vec3 = Vec3(0.0, 0.0, 1.0);
 
     pub const fn new() -> Vec3 {
         Vec3(0.0, 0.0, 0.0)
@@ -42,14 +42,18 @@ impl Vec3 {
     pub fn random_in_unit_sphere() -> Vec3 {
         loop {
             let point = Point3::random_range(-1.0..=1.0);
-            if point.quadrature() < 1.0 {
+            if point.quadrance() < 1.0 {
                 return point;
             }
         }
     }
 
     pub fn random_unit_vector() -> Vec3 {
-        Vec3::random_in_unit_sphere().unit_vector()
+        match Vec3::random_in_unit_sphere().unit_vector() {
+            None => Vec3::E0,
+            Some(vec) => vec,
+
+        }
     }
 
     pub fn random_in_hemisphere(normal: Vec3) -> Vec3 {
@@ -61,15 +65,24 @@ impl Vec3 {
         }
     }
 
-    pub fn length(self) -> f64 {
-        self.quadrature().sqrt()
+    pub fn random_in_unit_disk() -> Vec3 {
+        loop {
+            let vec = Vec3::from(rand::random(), rand::random(), 0.0);
+            if vec.quadrance() <= 1.0 {
+                return vec;
+            }
+        }
     }
 
-    pub fn quadrature(self) -> f64 {
+    pub fn length(self) -> f64 {
+        self.quadrance().sqrt()
+    }
+
+    pub fn quadrance(self) -> f64 {
         self.dot(self)
     }
 
-    pub fn unit_vector(self) -> Vec3 {
+    pub fn unit_vector(self) -> Option<Vec3> {
         self.scalar_div(self.length())
     }
 
@@ -77,8 +90,12 @@ impl Vec3 {
         self * Vec3::scalar(scalar)
     }
 
-    pub fn scalar_div(self, scalar: f64) -> Vec3 {
-        self / Vec3::scalar(scalar)
+    pub fn scalar_div(self, scalar: f64) -> Option<Vec3> {
+        let zero = scalar == 0.0;
+        match zero {
+            true => None,
+            false => Some(self / Vec3::scalar(scalar)),
+        }
     }
 
     pub fn dot(self, other: Vec3) -> f64 {
@@ -100,19 +117,16 @@ impl Vec3 {
         Vec3(transform(self.0), transform(self.1), transform(self.2))
     }
 
-    pub fn near_zero(self) -> bool {
-        self.quadrature() == 0.0
-    }
-
     pub fn reflect(self, normal: Vec3) -> Vec3 {
         self - normal.scalar_mul(2.0 * self.dot(normal))
     }
 
+    // output will be a unit vector up to floating point imprecision
     pub fn refract(self, normal: Vec3, eta_over_eta_prime: f64) -> Vec3 {
         let cos_theta = (-normal).dot(self);
         let r_in_perp = self + normal.scalar_mul(cos_theta);
         let r_out_perp = r_in_perp.scalar_mul(eta_over_eta_prime);
-        let parallel_len = (1.0 - r_out_perp.quadrature()).sqrt();
+        let parallel_len = (1.0 - r_out_perp.quadrance()).sqrt();
         let r_out_parallel = -(normal.scalar_mul(parallel_len));
         r_out_perp + r_out_parallel
     }
@@ -188,10 +202,6 @@ mod tests {
 
     const UNIT_RANGE: std::ops::RangeInclusive<f64> = 0.9999999999..=1.0000000001;
 
-    fn nearly_equal(a: f64, b: f64) -> bool {
-        UNIT_RANGE.contains(&(a - b + 1.0))
-    }
-
     #[test]
     fn new() {
         let new = Vec3::new();
@@ -224,14 +234,37 @@ mod tests {
         assert_eq!(vec.2, 0.777);
     }
 
-    fn test_range(range: std::ops::RangeInclusive<f64>, vec: Vec3) {
-        assert!(range.contains(&vec.0));
-        assert!(range.contains(&vec.1));
-        assert!(range.contains(&vec.2));
+    #[test]
+    fn scalar_mul() {
+        let vec = Vec3::from_const(-1.0, -2.0, -3.0);
+        let mul1 = vec.scalar_mul(-1.0);
+        let mul2 = vec.scalar_mul(2.0);
+
+        assert_eq!(mul1.0, 1.0);
+        assert_eq!(mul1.1, 2.0);
+        assert_eq!(mul1.2, 3.0);
+
+        assert_eq!(mul2.0, -2.0);
+        assert_eq!(mul2.1, -4.0);
+        assert_eq!(mul2.2, -6.0);
+    }
+
+    #[test]
+    fn scalar_div() {
+        let vec = Vec3::from_const(1.0, 2.0, 3.0);
+
+        let div = vec.scalar_div(5.0).unwrap();
+        assert_eq!(div.0, 1.0 / 5.0);
+        assert_eq!(div.1, 2.0 / 5.0);
+        assert_eq!(div.2, 3.0 / 5.0);
+
+        let zero = vec.scalar_div(0.0);
+        assert_eq!(zero, None);
     }
 
     #[test]
     fn random() {
+        // Has a negligible chance to randomly fail
         let mut previous = Vec3::new();
         for _ in 0..100 {
             let vec = Vec3::random();
@@ -239,6 +272,12 @@ mod tests {
             assert_ne!(previous, vec);
             previous = vec;
         }
+    }
+
+    fn test_range(range: std::ops::RangeInclusive<f64>, vec: Vec3) {
+        assert!(range.contains(&vec.0));
+        assert!(range.contains(&vec.1));
+        assert!(range.contains(&vec.2));
     }
 
     #[test]
@@ -258,7 +297,7 @@ mod tests {
         let mut previous = Vec3::new();
         for _ in 0..100 {
             let vec = Vec3::random_in_unit_sphere();
-            assert!(vec.quadrature() <= 1.0);
+            assert!(vec.quadrance() <= 1.0);
             assert_ne!(previous, vec);
             previous = vec;
         }
@@ -266,6 +305,7 @@ mod tests {
 
     #[test]
     fn random_unit_vector() {
+        // Has a negligible chance to randomly fail
         let mut previous = Vec3::new();
         for _ in 0..100 {
             let vec = Vec3::random_unit_vector();
@@ -289,6 +329,18 @@ mod tests {
     }
 
     #[test]
+    fn random_in_unit_disk() {
+        let mut previous = Vec3::new();
+        for _ in 0..100 {
+            let vec = Vec3::random_in_unit_disk();
+            assert!(vec.length() <= 1.0);
+            assert_eq!(vec.2, 0.0);
+            assert_ne!(previous, vec);
+            previous = vec;
+        }
+    }
+
+    #[test]
     fn length() {
         assert_eq!(Vec3::new().length(), 0.0);
 
@@ -299,9 +351,6 @@ mod tests {
         assert_eq!(Vec3::from_const(0.0, 3.0, 4.0).length(), 5.0);
         assert_eq!(Vec3::from_const(3.0, 0.0, 4.0).length(), 5.0);
         assert_eq!(Vec3::from_const(3.0, 4.0, 0.0).length(), 5.0);
-        assert_eq!(Vec3::from_const(0.0, 5.0, 12.0).length(), 13.0);
-        assert_eq!(Vec3::from_const(5.0, 0.0, 12.0).length(), 13.0);
-        assert_eq!(Vec3::from_const(5.0, 12.0, 0.0).length(), 13.0);
 
         assert_eq!(Vec3::from_const(1.0, 2.0, 2.0).length(), 3.0);
         assert_eq!(Vec3::from_const(2.0, 3.0, 6.0).length(), 7.0);
@@ -310,68 +359,52 @@ mod tests {
     }
 
     #[test]
-    fn quadrature() {
-        assert_eq!(Vec3::new().quadrature(), 0.0);
+    fn quadrance() {
+        assert_eq!(Vec3::new().quadrance(), 0.0);
 
-        assert_eq!(Vec3::from_const(0.0, 0.0, 1.0).quadrature(), 1.0);
-        assert_eq!(Vec3::from_const(0.0, 1.0, 0.0).quadrature(), 1.0);
-        assert_eq!(Vec3::from_const(1.0, 0.0, 0.0).quadrature(), 1.0);
+        assert_eq!(Vec3::from_const(0.0, 0.0, 1.0).quadrance(), 1.0);
+        assert_eq!(Vec3::from_const(0.0, 1.0, 0.0).quadrance(), 1.0);
+        assert_eq!(Vec3::from_const(1.0, 0.0, 0.0).quadrance(), 1.0);
 
-        assert_eq!(Vec3::from_const(0.0, 3.0, 4.0).quadrature(), 25.0);
-        assert_eq!(Vec3::from_const(3.0, 0.0, 4.0).quadrature(), 25.0);
-        assert_eq!(Vec3::from_const(3.0, 4.0, 0.0).quadrature(), 25.0);
-        assert_eq!(Vec3::from_const(0.0, 5.0, 12.0).quadrature(), 169.0);
-        assert_eq!(Vec3::from_const(5.0, 0.0, 12.0).quadrature(), 169.0);
-        assert_eq!(Vec3::from_const(5.0, 12.0, 0.0).quadrature(), 169.0);
+        assert_eq!(Vec3::from_const(0.0, 3.0, 4.0).quadrance(), 25.0);
+        assert_eq!(Vec3::from_const(3.0, 0.0, 4.0).quadrance(), 25.0);
+        assert_eq!(Vec3::from_const(3.0, 4.0, 0.0).quadrance(), 25.0);
 
-        assert_eq!(Vec3::from_const(1.0, 2.0, 2.0).quadrature(), 9.0);
-        assert_eq!(Vec3::from_const(2.0, 3.0, 6.0).quadrature(), 49.0);
-        assert_eq!(Vec3::from_const(4.0, 4.0, 7.0).quadrature(), 81.0);
-        assert_eq!(Vec3::from_const(1.0, 4.0, 8.0).quadrature(), 81.0);
+        assert_eq!(Vec3::from_const(1.0, 2.0, 2.0).quadrance(), 9.0);
+        assert_eq!(Vec3::from_const(2.0, 3.0, 6.0).quadrance(), 49.0);
+        assert_eq!(Vec3::from_const(4.0, 4.0, 7.0).quadrance(), 81.0);
+        assert_eq!(Vec3::from_const(1.0, 4.0, 8.0).quadrance(), 81.0);
     }
 
     #[test]
     fn unit_vector() {
-        for _ in 0..100 {
-            let vec = Vec3::random().unit_vector();
-            assert!(UNIT_RANGE.contains(&vec.length()));
-        }
-    }
+        assert_eq!(Vec3::new().unit_vector(), None);
 
-    #[test]
-    fn scalar_mul() {
-        for _ in 0..100 {
-            let vec = Vec3::random();
-            let scalar: f64 = rand::random();
-            let mul = vec.scalar_mul(scalar);
-            assert!(nearly_equal(vec.length() * scalar.abs(), mul.length()));
-        }
-    }
+        assert_eq!(Vec3::E0.unit_vector().unwrap(), Vec3::E0);
+        assert_eq!(Vec3::E1.unit_vector().unwrap(), Vec3::E1);
+        assert_eq!(Vec3::E2.unit_vector().unwrap(), Vec3::E2);
 
-    #[test]
-    fn scalar_div() {
-        for _ in 0..100 {
-            let vec = Vec3::random();
-            let scalar: f64 = rand::random();
-            let div = vec.scalar_div(scalar);
-            assert!(nearly_equal(vec.length() / scalar.abs(), div.length()));
-        }
+        let v1 = Vec3::from_const(0.6, 0.8, 0.0);
+        let v2 = Vec3::from_const(0.0, 0.6, 0.8);
+        let v3 = Vec3::from_const(0.6, 0.0, 0.8);
+
+        assert_eq!(v1, v1.unit_vector().unwrap());
+        assert_eq!(v2, v2.unit_vector().unwrap());
+        assert_eq!(v3, v3.unit_vector().unwrap());
     }
 
     #[test]
     fn dot() {
-        for _ in 0..100 {
-            let vec = Vec3::random();
-            assert_eq!(vec.dot(Vec3::new()), 0.0);
-            assert_eq!(vec.dot(Vec3::E0), vec.0);
-            assert_eq!(vec.dot(Vec3::E1), vec.1);
-            assert_eq!(vec.dot(Vec3::E2), vec.2);
-            assert_eq!(vec.dot(Vec3::scalar(1.0)), vec.0 + vec.1 + vec.2);
-            assert_eq!(
-                vec.dot(Vec3::from_const(1.0, 2.0, 3.0)),
-                1.0 * vec.0 + 2.0 * vec.1 + 3.0 * vec.2
-            );
-        }
+        assert_eq!(Vec3::new().dot(Vec3::random()), 0.0);
+
+        assert_eq!(Vec3::E0.dot(Vec3::E1), 0.0);
+        assert_eq!(Vec3::E1.dot(Vec3::E2), 0.0);
+        assert_eq!(Vec3::E2.dot(Vec3::E0), 0.0);
+
+        let vec = Vec3::from_const(10.0, 20.0, 30.0);
+        assert_eq!(vec.dot(Vec3::E0), 10.0);
+        assert_eq!(vec.dot(Vec3::E1), 20.0);
+        assert_eq!(vec.dot(Vec3::E2), 30.0);
     }
 
     #[test]
@@ -379,13 +412,22 @@ mod tests {
         assert_eq!(Vec3::E0.cross(Vec3::E1), Vec3::E2);
         assert_eq!(Vec3::E1.cross(Vec3::E2), Vec3::E0);
         assert_eq!(Vec3::E0.cross(Vec3::E1), Vec3::E2);
+
+        assert_eq!(
+            Vec3::E0.scalar_mul(2.0).cross(Vec3::E1),
+            Vec3::E2.scalar_mul(2.0)
+        );
+
+        assert_eq!((Vec3::E0 + Vec3::E1).cross(Vec3::E2), Vec3::E0 - Vec3::E1);
     }
 
     #[test]
-    fn elementwise() {}
-
-    #[test]
-    fn near_zero() {}
+    fn elementwise() {
+        let vec = Vec3::new().elementwise(|x| x + 1.0);
+        assert_eq!(vec.0, 1.0);
+        assert_eq!(vec.1, 1.0);
+        assert_eq!(vec.2, 1.0);
+    }
 
     #[test]
     fn reflect() {}

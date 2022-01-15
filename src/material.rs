@@ -31,20 +31,23 @@ impl Material for Lambertian {
         attenuation: &mut Color,
         scattered: &mut Ray,
     ) -> bool {
+        // reject internal reflections from opaque material
         if !rec.front_face {
             return false;
         }
 
-        let mut scatter_direction = rec.normal + Vec3::random_unit_vector();
-
-        if scatter_direction.near_zero() {
-            scatter_direction = rec.normal;
-        }
-
-        *scattered = Ray {
-            origin: rec.point,
-            direction: scatter_direction,
+        // unit normal + unit vector guaranteed to lie in or above the
+        // tangent plane, thus only need to account for the case of
+        // a direction vector of zero length
+        let scatter = rec.normal + Vec3::random_unit_vector();
+        let direction = match scatter.unit_vector() {
+            Some(vec) => vec,
+            None => rec.normal,
         };
+
+        let origin = rec.point;
+
+        *scattered = Ray { origin, direction };
         *attenuation = self.albedo;
         true
     }
@@ -70,24 +73,29 @@ impl Material for Metal {
         attenuation: &mut Color,
         scattered: &mut Ray,
     ) -> bool {
+        // reject internal reflections from opaque materials
         if !rec.front_face {
             return false;
         }
 
-        let origin = rec.point;
-
-        let reflection = ray_in.direction.unit_vector().reflect(rec.normal);
+        // calculate pure specular reflection vector
+        let reflection = ray_in.direction.reflect(rec.normal);
         let mut direction;
-
         loop {
             direction = reflection + Vec3::random_in_unit_sphere().scalar_mul(self.fuzz);
 
-            if direction.near_zero() || direction.dot(rec.normal) <= 0.0 {
+            // only accept direction vectors that have some length and
+            // lie above the plane tangent to the sphere at the point
+            // of reflection
+            if direction.quadrance() == 0.0 || direction.dot(rec.normal) <= 0.0 {
                 continue;
             } else {
                 break;
             }
         }
+        direction = direction.unit_vector().unwrap();
+
+        let origin = rec.point;
 
         *scattered = Ray { origin, direction };
         *attenuation = self.albedo;
@@ -122,28 +130,28 @@ impl Material for Dielectric {
         attenuation: &mut Color,
         scattered: &mut Ray,
     ) -> bool {
-        *attenuation = Color::from_const(1.0, 1.0, 1.0);
-        let origin = rec.point;
-
+        // calculate refraction ratio depending on in internal/external reflection
         let refraction_ratio = match rec.front_face {
             true => 1.0 / self.index_of_refraction,
             false => self.index_of_refraction,
         };
 
-        let unit_direction = ray_in.direction.unit_vector();
-        let cos_theta = rec.normal.dot(-unit_direction).clamp(-1.0, 1.0);
+        let cos_theta = -rec.normal.dot(ray_in.direction);
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
 
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
-        let reflect =
-            cannot_refract || Dielectric::reflectance(cos_theta, refraction_ratio) > rand::random();
+        let reflectance = Dielectric::reflectance(cos_theta, self.index_of_refraction);
+        let reflect = cannot_refract || reflectance > rand::random();
 
         let direction = match reflect {
-            true => unit_direction.reflect(rec.normal),
-            false => unit_direction.refract(rec.normal, refraction_ratio),
+            true => ray_in.direction.reflect(rec.normal),
+            false => ray_in.direction.refract(rec.normal, refraction_ratio),
         };
 
+        let origin = rec.point;
+
         *scattered = Ray { origin, direction };
+        *attenuation = Color::from_const(1.0, 1.0, 1.0);
         true
     }
 }
