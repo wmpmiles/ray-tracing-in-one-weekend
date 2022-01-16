@@ -8,16 +8,19 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
 use std::rc::Rc;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
+use rand::Rng;
 
 fn main() {
     // Image
-    const FILENAME: &str = r"finalrender.png";
+    const FILENAME: &str = r"testrender.png";
     const ASPECT_RATIO: f64 = 3.0 / 2.0;
-    const IMAGE_WIDTH: u32 = 1200;
+    const IMAGE_WIDTH: u32 = 800;
     const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as u32;
     const IMAGE_SIZE: usize = (IMAGE_WIDTH * IMAGE_HEIGHT * 4) as usize;
 
-    const SAMPLES_PER_PIXEL: u32 = 500;
+    const SAMPLES_PER_PIXEL: u32 = 10;
     const MAX_DEPTH: u32 = 50;
 
     let path = Path::new(FILENAME);
@@ -107,6 +110,9 @@ fn ray_color(ray: &Ray, world: &dyn Object, depth: u32) -> Color {
 }
 
 fn random_scene() -> ObjectList {
+    let mut rng = StdRng::seed_from_u64(0);
+    let random: &mut dyn FnMut() -> f64 = &mut || rng.gen();
+
     let mut world = ObjectList::new();
 
     let ground_material = Rc::new(Lambertian {
@@ -123,27 +129,27 @@ fn random_scene() -> ObjectList {
 
     for a in -11..11 {
         for b in -11..11 {
-            let a = f64::from(a);
-            let b = f64::from(b);
+            let a = a as f64;
+            let b = b as f64;
 
-            let choose_mat: f64 = rand::random();
+            let choose_mat: f64 = random();
             let center = Point3::from(
-                a + 0.9 * rand::random::<f64>(),
+                a + 0.9 * random(),
                 0.2,
-                b + 0.9 * rand::random::<f64>() as f64,
+                b + 0.9 * random(),
             );
 
             if (center - Point3::from_const(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
                     // diffuse
-                    let albedo = Color::random() * Color::random();
+                    let albedo = Color::from(random(), random(), random()) * Color::from(random(), random(), random());
                     let material = Lambertian { albedo };
                     let sphere = Sphere::from(center, 0.2, Rc::new(material)).unwrap();
                     world.add(Rc::new(sphere));
                 } else if choose_mat < 0.95 {
                     // metal
-                    let albedo = Color::random_range(0.5..=1.0);
-                    let fuzz = rand::random::<f64>() / 2.0;
+                    let albedo = Color::from(random(), random(), random()).scalar_mul(0.5) + Color::scalar(0.5);
+                    let fuzz = random() / 2.0;
                     let material = Metal { albedo, fuzz };
                     let sphere = Sphere::from(center, 0.2, Rc::new(material)).unwrap();
                     world.add(Rc::new(sphere));
