@@ -8,3 +8,6 @@ edition = "2018"
 [dependencies]
 rand = "0.8.0"
 png = "0.17.2"
+
+[profile.release]
+debug = 1

@@ -16,7 +16,7 @@ fn main() {
     // Image
     const FILENAME: &str = r"testrender.png";
     const ASPECT_RATIO: f64 = 3.0 / 2.0;
-    const IMAGE_WIDTH: u32 = 800;
+    const IMAGE_WIDTH: u32 = 400;
     const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as u32;
     const IMAGE_SIZE: usize = (IMAGE_WIDTH * IMAGE_HEIGHT * 4) as usize;
 
