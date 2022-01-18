@@ -11,3 +11,4 @@ png = "0.17.2"
 
 [profile.release]
 debug = 1
+lto = false

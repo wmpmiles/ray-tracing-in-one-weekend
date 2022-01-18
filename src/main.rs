@@ -1,42 +1,20 @@
 use rtow::camera::Camera;
-use rtow::color::Color;
 use rtow::material::*;
 use rtow::object::*;
 use rtow::ray::Ray;
 use rtow::vec3::*;
-use std::fs::File;
-use std::io::BufWriter;
-use std::path::Path;
+use rtow::image::Image;
 use std::rc::Rc;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rand::Rng;
 
-fn main() {
+fn main() -> std::io::Result<()> {
     // Image
-    const FILENAME: &str = r"testrender.png";
-    const ASPECT_RATIO: f64 = 3.0 / 2.0;
-    const IMAGE_WIDTH: u32 = 400;
-    const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as u32;
-    const IMAGE_SIZE: usize = (IMAGE_WIDTH * IMAGE_HEIGHT * 4) as usize;
-
-    const SAMPLES_PER_PIXEL: u32 = 10;
-    const MAX_DEPTH: u32 = 50;
-
-    let path = Path::new(FILENAME);
-    let file = File::create(path).unwrap();
-    let w = BufWriter::new(file);
-
-    let mut encoder = png::Encoder::new(w, IMAGE_WIDTH, IMAGE_HEIGHT);
-    encoder.set_color(png::ColorType::Rgba);
-    encoder.set_depth(png::BitDepth::Eight);
-    let mut writer = encoder.write_header().unwrap();
-    let mut data: Vec<u8> = Vec::with_capacity(IMAGE_SIZE);
+    let mut image = Image::new(3.0 / 2.0, 400);
 
     // World
     let world = random_scene();
-
-    println!("{}", world.objects.len());
 
     // Camera
     let lookfrom = Point3::from_const(13.0, 2.0, 3.0);
@@ -50,32 +28,37 @@ fn main() {
         lookat,
         vup,
         20.0,
-        ASPECT_RATIO,
+        image.aspect_ratio,
         aperture,
         dist_to_focus,
     );
 
     // Render
-    for j in (0..IMAGE_HEIGHT).rev() {
+    const SAMPLES_PER_PIXEL: u32 = 10;
+    const MAX_DEPTH: u32 = 50;
+
+    for j in (0..image.height).rev() {
         eprint!("\rScanlines remaining: {} ", j);
-        for i in 0..IMAGE_WIDTH {
+        for i in 0..image.width {
             let mut pixel_color = Color::new();
 
             for _ in 0..SAMPLES_PER_PIXEL {
-                let u = (rand::random::<f64>() + i as f64) / (IMAGE_WIDTH - 1) as f64;
-                let v = (rand::random::<f64>() + j as f64) / (IMAGE_HEIGHT - 1) as f64;
+                let u = (rand::random::<f64>() + i as f64) / (image.width - 1) as f64;
+                let v = (rand::random::<f64>() + j as f64) / (image.height - 1) as f64;
 
                 let ray = camera.get_ray(u, v);
 
                 pixel_color += ray_color(&ray, &world, MAX_DEPTH);
             }
 
-            pixel_color.write(SAMPLES_PER_PIXEL, &mut data);
+            image.add_pixel(pixel_color, SAMPLES_PER_PIXEL);
         }
     }
 
-    writer.write_image_data(&data).unwrap();
+    image.write(r"render.png")?;
     eprint!("\nDone.\n");
+
+    Ok(())
 }
 
 fn ray_color(ray: &Ray, world: &dyn Object, depth: u32) -> Color {

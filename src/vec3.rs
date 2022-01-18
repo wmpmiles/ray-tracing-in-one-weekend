@@ -3,6 +3,7 @@ use rand::distributions::{Distribution, Uniform};
 #[derive(Debug, PartialEq, Copy, Clone, Default)]
 pub struct Vec3(pub f64, pub f64, pub f64);
 pub type Point3 = Vec3;
+pub type Color = Vec3;
 
 impl Vec3 {
     pub const E0: Vec3 = Vec3(1.0, 0.0, 0.0);
