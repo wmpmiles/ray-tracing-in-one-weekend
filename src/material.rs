@@ -2,37 +2,37 @@ use crate::hit_record::HitRecord;
 use crate::ray::Ray;
 use crate::vec3::*;
 
-pub trait Material {
-    fn scatter(
-        &self,
-        ray_in: &Ray,
-        rec: &HitRecord,
-        attenuation: &mut Color,
-        scattered: &mut Ray,
-    ) -> bool;
+#[derive(Copy, Clone)]
+pub enum Material {
+    Lambertian(Lambertian),
+    Metal(Metal),
+    Dielectric(Dielectric),
 }
 
-pub struct Lambertian {
-    pub albedo: Color,
-}
-
-impl Lambertian {
-    pub fn new(albedo: Color) -> Lambertian {
-        Lambertian { albedo }
+impl Material {
+    pub fn scatter(&self, ray_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
+        match self {
+            Self::Lambertian(lambertian) => lambertian.scatter(rec),
+            Self::Metal(metal) => metal.scatter(rec, ray_in),
+            Self::Dielectric(dielectric) => dielectric.scatter(rec, ray_in),
+        }
     }
 }
 
-impl Material for Lambertian {
-    fn scatter(
-        &self,
-        _ray_in: &Ray,
-        rec: &HitRecord,
-        attenuation: &mut Color,
-        scattered: &mut Ray,
-    ) -> bool {
+#[derive(Copy, Clone)]
+pub struct Lambertian {
+    albedo: Color,
+}
+
+impl Lambertian {
+    pub fn new(albedo: Color) -> Material {
+        Material::Lambertian( Lambertian { albedo } )
+    }
+
+    fn scatter(&self, rec: &HitRecord) -> Option<(Color, Ray)> {
         // reject internal reflections from opaque material
         if !rec.front_face {
-            return false;
+            return None;
         }
 
         // unit normal + unit vector guaranteed to lie in or above the
@@ -46,35 +46,25 @@ impl Material for Lambertian {
 
         let origin = rec.point;
 
-        *scattered = Ray { origin, direction };
-        *attenuation = self.albedo;
-        true
+        Some((self.albedo, Ray { origin, direction }))
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct Metal {
-    pub albedo: Color,
-    pub fuzz: f64,
+    albedo: Color,
+    fuzz: f64,
 }
 
 impl Metal {
-    pub fn new(albedo: Color, fuzz: f64) -> Metal {
-        let fuzz = fuzz.clamp(0.0, 1.0);
-        Metal { albedo, fuzz }
+    pub fn new(albedo: Color, fuzz: f64) -> Material {
+        Material::Metal( Metal { albedo, fuzz } )
     }
-}
 
-impl Material for Metal {
-    fn scatter(
-        &self,
-        ray_in: &Ray,
-        rec: &HitRecord,
-        attenuation: &mut Color,
-        scattered: &mut Ray,
-    ) -> bool {
+    fn scatter(&self, rec: &HitRecord, ray_in: &Ray) -> Option<(Color, Ray)> {
         // reject internal reflections from opaque materials
         if !rec.front_face {
-            return false;
+            return None;
         }
 
         // calculate pure specular reflection vector
@@ -96,21 +86,18 @@ impl Material for Metal {
 
         let origin = rec.point;
 
-        *scattered = Ray { origin, direction };
-        *attenuation = self.albedo;
-        true
+        Some((self.albedo, Ray { origin, direction }))
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct Dielectric {
     index_of_refraction: f64,
 }
 
 impl Dielectric {
-    pub fn new(index_of_refraction: f64) -> Self {
-        Dielectric {
-            index_of_refraction,
-        }
+    pub fn new(index_of_refraction: f64) -> Material {
+        Material::Dielectric( Dielectric { index_of_refraction } )
     }
 
     fn reflectance(cosine: f64, refractive_index: f64) -> f64 {
@@ -119,16 +106,8 @@ impl Dielectric {
         r0 = r0 * r0;
         r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
     }
-}
 
-impl Material for Dielectric {
-    fn scatter(
-        &self,
-        ray_in: &Ray,
-        rec: &HitRecord,
-        attenuation: &mut Color,
-        scattered: &mut Ray,
-    ) -> bool {
+    fn scatter(&self, rec: &HitRecord, ray_in: &Ray) -> Option<(Color, Ray)> {
         // calculate refraction ratio depending on in internal/external reflection
         let refraction_ratio = match rec.front_face {
             true => 1.0 / self.index_of_refraction,
@@ -139,7 +118,7 @@ impl Material for Dielectric {
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
 
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
-        let reflectance = Dielectric::reflectance(cos_theta, self.index_of_refraction);
+        let reflectance = Self::reflectance(cos_theta, self.index_of_refraction);
         let reflect = cannot_refract || reflectance > rand::random();
 
         let direction = match reflect {
@@ -149,8 +128,6 @@ impl Material for Dielectric {
 
         let origin = rec.point;
 
-        *scattered = Ray { origin, direction };
-        *attenuation = Color::from_const(1.0, 1.0, 1.0);
-        true
+        Some((Color::from_const(1.0, 1.0, 1.0), Ray { origin, direction }))
     }
 }

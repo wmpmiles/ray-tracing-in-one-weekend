@@ -1,41 +1,27 @@
 use crate::material::*;
 use crate::ray::Ray;
 use crate::vec3::*;
-use std::rc::Rc;
 
 pub struct HitRecord {
     pub point: Point3,
     pub normal: Vec3,
-    pub material: Rc<dyn Material>,
+    pub material: Material,
     pub t: f64,
     pub front_face: bool,
 }
 
 impl HitRecord {
-    pub fn new() -> HitRecord {
+    pub fn new(point: Point3, outward_normal: Vec3, ray_in: &Ray, material: Material, t: f64) -> HitRecord {
+        let front_face = ray_in.direction.dot(outward_normal) < 0.0;
+        let normal = if front_face { outward_normal } else { -outward_normal };
+
         HitRecord {
-            material: Rc::new(Lambertian {
-                albedo: Default::default(),
-            }),
-            point: Default::default(),
-            normal: Default::default(),
-            t: Default::default(),
-            front_face: Default::default(),
+            point,
+            normal,
+            material,
+            t,
+            front_face,
         }
     }
-
-    pub fn set_face_normal(&mut self, ray: &Ray, outward_normal: Vec3) {
-        self.front_face = ray.direction.dot(outward_normal) < 0.0;
-        self.normal = if self.front_face {
-            outward_normal
-        } else {
-            -outward_normal
-        };
-    }
 }
 
-impl Default for HitRecord {
-    fn default() -> Self {
-        Self::new()
-    }
-}

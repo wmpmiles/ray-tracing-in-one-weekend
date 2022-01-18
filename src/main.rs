@@ -1,13 +1,12 @@
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
 use rtow::camera::Camera;
+use rtow::image::Image;
 use rtow::material::*;
 use rtow::object::*;
 use rtow::ray::Ray;
 use rtow::vec3::*;
-use rtow::image::Image;
-use std::rc::Rc;
-use rand::rngs::StdRng;
-use rand::SeedableRng;
-use rand::Rng;
 
 fn main() -> std::io::Result<()> {
     // Image
@@ -61,54 +60,39 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn ray_color(ray: &Ray, world: &dyn Object, depth: u32) -> Color {
+fn ray_color(ray: &Ray, world: &Object, depth: u32) -> Color {
     const ONE: Color = Color::from_const(1.0, 1.0, 1.0);
     const BASE: Color = Color::from_const(0.5, 0.7, 1.0);
     const NONE: Color = Color::from_const(0.0, 0.0, 0.0);
     const MIN: f64 = 0.001; // minimize hitting the same point due to floating point approximation
 
     if depth == 0 {
-        return NONE;
-    }
-
-    let mut rec = Default::default();
-
-    if world.hit(ray, MIN, f64::INFINITY, &mut rec) {
-        let mut scattered: Ray = Default::default();
-        let mut attenuation: Color = Default::default();
-
-        if rec
-            .material
-            .scatter(ray, &rec, &mut attenuation, &mut scattered)
-        {
-            attenuation * ray_color(&scattered, world, depth - 1)
+        NONE
+    } else if let Some(rec) = world.hit(ray, MIN, f64::INFINITY) {
+        if let Some((attenuation, ray)) = rec.material.scatter(ray, &rec) {
+            attenuation * ray_color(&ray, world, depth - 1)
         } else {
             NONE
         }
     } else {
         let t = 0.5 * (ray.direction.1 + 1.0);
-
         ONE.scalar_mul(1.0 - t) + BASE.scalar_mul(t)
     }
 }
 
-fn random_scene() -> ObjectList {
+fn random_scene() -> Object {
+    const SMALL_RADIUS: f64 = 0.2;
+
     let mut rng = StdRng::seed_from_u64(0);
     let random: &mut dyn FnMut() -> f64 = &mut || rng.gen();
 
-    let mut world = ObjectList::new();
+    let mut world = List::new();
 
-    let ground_material = Rc::new(Lambertian {
-        albedo: Color::from_const(0.5, 0.5, 0.5),
-    });
-    world.add(Rc::new(
-        Sphere::from(
-            Point3::from_const(0.0, -1000.0, 0.0),
-            1000.0,
-            ground_material,
-        )
-        .unwrap(),
-    ));
+    let ground_center = Point3::from_const(0.0, -1000.0, 0.0);
+    let ground_radius = 1000.0;
+    let ground_material = Lambertian::new(Color::from_const(0.5, 0.5, 0.5));
+    let ground = Sphere::new(ground_center, ground_radius, ground_material);
+    world.add(ground);
 
     for a in -11..11 {
         for b in -11..11 {
@@ -116,46 +100,45 @@ fn random_scene() -> ObjectList {
             let b = b as f64;
 
             let choose_mat: f64 = random();
-            let center = Point3::from(
-                a + 0.9 * random(),
-                0.2,
-                b + 0.9 * random(),
-            );
+            let center = Point3::from(a + 0.9 * random(), 0.2, b + 0.9 * random());
 
             if (center - Point3::from_const(4.0, 0.2, 0.0)).length() > 0.9 {
-                if choose_mat < 0.8 {
-                    // diffuse
-                    let albedo = Color::from(random(), random(), random()) * Color::from(random(), random(), random());
-                    let material = Lambertian { albedo };
-                    let sphere = Sphere::from(center, 0.2, Rc::new(material)).unwrap();
-                    world.add(Rc::new(sphere));
+                let material = if choose_mat < 0.8 {
+                    let albedo = Color::from(random(), random(), random())
+                        * Color::from(random(), random(), random());
+                    Lambertian::new(albedo)
                 } else if choose_mat < 0.95 {
-                    // metal
-                    let albedo = Color::from(random(), random(), random()).scalar_mul(0.5) + Color::scalar(0.5);
+                    let albedo = Color::from(random(), random(), random()).scalar_mul(0.5)
+                        + Color::scalar(0.5);
                     let fuzz = random() / 2.0;
-                    let material = Metal { albedo, fuzz };
-                    let sphere = Sphere::from(center, 0.2, Rc::new(material)).unwrap();
-                    world.add(Rc::new(sphere));
+                    Metal::new(albedo, fuzz)
                 } else {
-                    let material = Dielectric::new(1.5);
-                    let sphere = Sphere::from(center, 0.2, Rc::new(material)).unwrap();
-                    world.add(Rc::new(sphere));
-                }
+                    Dielectric::new(1.5)
+                };
+
+                let sphere = Sphere::new(center, SMALL_RADIUS, material);
+                world.add(sphere);
             }
         }
     }
 
+    let center1 = Point3::from_const(0.0, 1.0, 0.0);
+    let center2 = Point3::from_const(-4.0, 1.0, 0.0);
+    let center3 = Point3::from_const(4.0, 1.0, 0.0);
+
+    const LARGE_RADIUS: f64 = 1.0;
+
     let material1 = Dielectric::new(1.5);
-    let material2 = Lambertian { albedo: Color::from_const(0.4, 0.2, 0.1) };
-    let material3 = Metal { albedo: Color::from_const(0.7, 0.6, 0.5), fuzz: 0.0 };
+    let material2 = Lambertian::new(Color::from_const(0.4, 0.2, 0.1));
+    let material3 = Metal::new(Color::from_const(0.7, 0.6, 0.5), 0.0);
 
-    let sphere1 = Sphere::from(Point3::from_const(0.0, 1.0, 0.0), 1.0, Rc::new(material1)).unwrap();
-    let sphere2 = Sphere::from(Point3::from_const(-4.0, 1.0, 0.0), 1.0, Rc::new(material2)).unwrap();
-    let sphere3 = Sphere::from(Point3::from_const(4.0, 1.0, 0.0), 1.0, Rc::new(material3)).unwrap();
+    let sphere1 = Sphere::new(center1, LARGE_RADIUS, material1);
+    let sphere2 = Sphere::new(center2, LARGE_RADIUS, material2);
+    let sphere3 = Sphere::new(center3, LARGE_RADIUS, material3);
 
-    world.add(Rc::new(sphere1));
-    world.add(Rc::new(sphere2));
-    world.add(Rc::new(sphere3));
+    world.add(sphere1);
+    world.add(sphere2);
+    world.add(sphere3);
 
-    world
+    Object::List(world)
 }

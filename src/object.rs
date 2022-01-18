@@ -2,42 +2,45 @@ use crate::hit_record::HitRecord;
 use crate::material::Material;
 use crate::ray::Ray;
 use crate::vec3::*;
-use std::rc::Rc;
 
-pub trait Object {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool;
+pub enum Object {
+    Sphere(Sphere),
+    List(List),
 }
 
-pub struct Sphere {
-    centre: Point3,
-    radius: f64,
-    material: Rc<dyn Material>,
-}
-
-impl Sphere {
-    pub fn from(centre: Point3, radius: f64, material: Rc<dyn Material>) -> Option<Sphere> {
-        let zero = radius == 0.0;
-        match zero {
-            true => None,
-            false => Some(Sphere {
-                centre,
-                radius,
-                material,
-            }),
+impl Object {
+    pub fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        match self {
+            Object::Sphere(sphere) => sphere.hit(ray, t_min, t_max),
+            Object::List(list) => list.hit(ray, t_min, t_max),
         }
     }
 }
 
-impl Object for Sphere {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
-        let oc = ray.origin - self.centre;
+pub struct Sphere {
+    center: Point3,
+    radius: f64,
+    material: Material,
+}
+
+impl Sphere {
+    pub fn new(center: Point3, radius: f64, material: Material) -> Object {
+        Object::Sphere(Self {
+            center,
+            radius,
+            material,
+        })
+    }
+
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        let oc = ray.origin - self.center;
         let a = ray.direction.dot(ray.direction);
         let half_b = ray.direction.dot(oc);
         let c = oc.dot(oc) - self.radius * self.radius;
         let delta = half_b * half_b - a * c;
         if delta < 0.0 {
             // no solutions -> no intersection
-            return false;
+            return None;
         }
 
         // find the nearest root that lies in the acceptable range
@@ -46,54 +49,48 @@ impl Object for Sphere {
         if root < t_min || t_max < root {
             root = (-half_b + sqrtd) / a;
             if root < t_min || t_max < root {
-                return false;
+                return None;
             }
         }
 
-        rec.t = root;
-        rec.point = ray.at(rec.t);
-        let outward_normal = (rec.point - self.centre).scalar_div(self.radius).unwrap();
-        rec.set_face_normal(ray, outward_normal);
-        rec.material = Rc::clone(&self.material);
+        let t = root;
+        let point = ray.at(t);
+        let outward_normal = (point - self.center).scalar_div(self.radius).unwrap();
+        let material = self.material;
 
-        true
+        Some(HitRecord::new(point, outward_normal, ray, material, t))
     }
 }
 
-pub struct ObjectList {
-    pub objects: Vec<Rc<dyn Object>>,
+pub struct List {
+    objects: Vec<Object>,
 }
 
-impl ObjectList {
-    pub fn new() -> ObjectList {
-        ObjectList {
+impl List {
+    pub fn new() -> Self {
+        Self {
             objects: Vec::new(),
         }
     }
 
-    pub fn add(&mut self, object: Rc<dyn Object>) {
+    pub fn add(&mut self, object: Object) {
         self.objects.push(object);
     }
-}
 
-impl Object for ObjectList {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
-        let mut hit_anything = false;
-        let mut closest_so_far = t_max;
+    pub fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        let mut closest: Option<HitRecord> = None;
 
         for object in &self.objects {
-            if object.hit(ray, t_min, closest_so_far, rec) {
-                hit_anything = true;
-                closest_so_far = rec.t;
+            let t_max = match &closest {
+                None => t_max,
+                Some(hit) => hit.t,
+            };
+
+            if let Some(hit) = object.hit(ray, t_min, t_max) {
+                closest = Some(hit);
             }
         }
 
-        hit_anything
-    }
-}
-
-impl Default for ObjectList {
-    fn default() -> Self {
-        Self::new()
+        closest
     }
 }
