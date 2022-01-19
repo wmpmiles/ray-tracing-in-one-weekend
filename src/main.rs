@@ -8,14 +8,15 @@ use rtow::object::*;
 use rtow::ray::Ray;
 use rtow::vec3::*;
 use rtow::sampler::SquareSampler;
+use rtow::config::Config;
 use std::env;
-use std::str::FromStr;
 
 fn main() -> std::io::Result<()> {
+    // Args
+    let config = Config::parse(env::args());
+
     // Image
-    let aspect_ratio = 3.0 / 2.0;
-    let image_width = 400;
-    let mut image = Image::new(aspect_ratio, image_width);
+    let mut image = Image::new(config.aspect_ratio, config.image_width);
 
     // World
     let world = random_scene();
@@ -37,28 +38,23 @@ fn main() -> std::io::Result<()> {
         aperture,
         dist_to_focus,
     );
-
-    // Render
-    let mut args = env::args();
-    let _exe = args.next();
-    let n = u32::from_str(&args.next().unwrap()).unwrap();
-    let n2 = n * n;
-    const MAX_DEPTH: u32 = 50;
+    
+    // Sampler
+    let sampler = SquareSampler::new(image.width, image.height, config.sampler_n);
 
     // using bottom left as (0,0)
     for (x, y) in image.iter() {
         let mut pixel_color = Color::new();
 
-        let sampler = SquareSampler::new(x, y, image.width, image.height, n);
-        for (u, v) in sampler {
+        for (u, v) in sampler.iter(x, y) {
             let ray = camera.get_ray(u, v);
-            pixel_color += ray_color(&ray, &world, MAX_DEPTH);
+            pixel_color += ray_color(&ray, &world, config.max_depth);
         }
 
-        image.add_pixel(pixel_color, n2);
+        image.add_pixel(pixel_color, sampler.samples());
     }
 
-    image.write(r"render.png")?;
+    image.write(&config.filename)?;
     eprint!("\nDone.\n");
 
     Ok(())
