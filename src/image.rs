@@ -7,6 +7,12 @@ pub struct Image {
     data: Vec<u8>,
 }
 
+pub struct ImageIter {
+    width: u32,
+    x: u32,
+    y: i32,
+}
+
 impl Image {
     pub fn new(aspect_ratio: f64, width: u32) -> Image {
         let height = (width as f64 / aspect_ratio) as u32;
@@ -17,6 +23,14 @@ impl Image {
             width,
             height,
             data,
+        }
+    }
+
+    pub fn iter(&self) -> ImageIter {
+        ImageIter {
+            width: self.width,
+            x: 0,
+            y: (self.height - 1) as i32,
         }
     }
 
@@ -52,5 +66,25 @@ impl Image {
         self.data.push(Self::map_byte(color.0));
         self.data.push(Self::map_byte(color.1));
         self.data.push(Self::map_byte(color.2));
+    }
+}
+
+impl Iterator for ImageIter {
+    type Item = (u32, u32);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.y < 0 {
+            None
+        } else {
+            let ret = Some(( self.x, self.y as u32 ));
+
+            self.x = (self.x + 1) % self.width;
+            if self.x == 0 {
+                eprint!("\rScanlines remaining: {} ", self.y);
+                self.y -= 1;
+            }
+
+            ret
+        }
     }
 }

@@ -10,7 +10,9 @@ use rtow::vec3::*;
 
 fn main() -> std::io::Result<()> {
     // Image
-    let mut image = Image::new(3.0 / 2.0, 400);
+    let aspect_ratio = 3.0 / 2.0;
+    let image_width = 400;
+    let mut image = Image::new(aspect_ratio, image_width);
 
     // World
     let world = random_scene();
@@ -19,6 +21,7 @@ fn main() -> std::io::Result<()> {
     let lookfrom = Point3::from_const(13.0, 2.0, 3.0);
     let lookat = Point3::from_const(0.0, 0.0, 0.0);
     let vup = Vec3::from_const(0.0, 1.0, 0.0);
+    let vfov = 20.0;
     let dist_to_focus = 10.0;
     let aperture = 0.1;
 
@@ -26,7 +29,7 @@ fn main() -> std::io::Result<()> {
         lookfrom,
         lookat,
         vup,
-        20.0,
+        vfov,
         image.aspect_ratio,
         aperture,
         dist_to_focus,
@@ -36,22 +39,20 @@ fn main() -> std::io::Result<()> {
     const SAMPLES_PER_PIXEL: u32 = 10;
     const MAX_DEPTH: u32 = 50;
 
-    for j in (0..image.height).rev() {
-        eprint!("\rScanlines remaining: {} ", j);
-        for i in 0..image.width {
-            let mut pixel_color = Color::new();
+    // using bottom left as (0,0)
+    for (x, y) in image.iter() {
+        let mut pixel_color = Color::new();
 
-            for _ in 0..SAMPLES_PER_PIXEL {
-                let u = (rand::random::<f64>() + i as f64) / (image.width - 1) as f64;
-                let v = (rand::random::<f64>() + j as f64) / (image.height - 1) as f64;
+        for _ in 0..SAMPLES_PER_PIXEL {
+            let u = (rand::random::<f64>() + x as f64) / (image.width - 1) as f64;
+            let v = (rand::random::<f64>() + y as f64) / (image.height - 1) as f64;
 
-                let ray = camera.get_ray(u, v);
+            let ray = camera.get_ray(u, v);
 
-                pixel_color += ray_color(&ray, &world, MAX_DEPTH);
-            }
-
-            image.add_pixel(pixel_color, SAMPLES_PER_PIXEL);
+            pixel_color += ray_color(&ray, &world, MAX_DEPTH);
         }
+
+        image.add_pixel(pixel_color, SAMPLES_PER_PIXEL);
     }
 
     image.write(r"render.png")?;
