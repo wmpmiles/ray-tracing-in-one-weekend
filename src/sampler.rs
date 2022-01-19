@@ -32,7 +32,7 @@ impl Iterator for SquareSampler {
         } else {
             // this creates a subpixel bias to the bottom left
             let i = (self.sample % self.n) as f64 / self.n as f64;
-            let j = (self.sample / self.n) as f64;
+            let j = (self.sample / self.n2) as f64;
 
             self.sample += 1;
 
