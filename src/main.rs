@@ -8,6 +8,8 @@ use rtow::object::*;
 use rtow::ray::Ray;
 use rtow::vec3::*;
 use rtow::sampler::SquareSampler;
+use std::env;
+use std::str::FromStr;
 
 fn main() -> std::io::Result<()> {
     // Image
@@ -37,21 +39,23 @@ fn main() -> std::io::Result<()> {
     );
 
     // Render
-    const N: u32 = 3;
-    const N2: u32 = N * N;
+    let mut args = env::args();
+    let _exe = args.next();
+    let n = u32::from_str(&args.next().unwrap()).unwrap();
+    let n2 = n * n;
     const MAX_DEPTH: u32 = 50;
 
     // using bottom left as (0,0)
     for (x, y) in image.iter() {
         let mut pixel_color = Color::new();
 
-        let sampler = SquareSampler::new(x, y, image.width, image.height, N);
+        let sampler = SquareSampler::new(x, y, image.width, image.height, n);
         for (u, v) in sampler {
             let ray = camera.get_ray(u, v);
             pixel_color += ray_color(&ray, &world, MAX_DEPTH);
         }
 
-        image.add_pixel(pixel_color, N2);
+        image.add_pixel(pixel_color, n2);
     }
 
     image.write(r"render.png")?;
