@@ -7,6 +7,7 @@ use rtow::material::*;
 use rtow::object::*;
 use rtow::ray::Ray;
 use rtow::vec3::*;
+use rtow::sampler::SquareSampler;
 
 fn main() -> std::io::Result<()> {
     // Image
@@ -36,23 +37,21 @@ fn main() -> std::io::Result<()> {
     );
 
     // Render
-    const SAMPLES_PER_PIXEL: u32 = 10;
+    const N: u32 = 3;
+    const N2: u32 = N * N;
     const MAX_DEPTH: u32 = 50;
 
     // using bottom left as (0,0)
     for (x, y) in image.iter() {
         let mut pixel_color = Color::new();
 
-        for _ in 0..SAMPLES_PER_PIXEL {
-            let u = (rand::random::<f64>() + x as f64) / (image.width - 1) as f64;
-            let v = (rand::random::<f64>() + y as f64) / (image.height - 1) as f64;
-
+        let sampler = SquareSampler::new(x, y, image.width, image.height, N);
+        for (u, v) in sampler {
             let ray = camera.get_ray(u, v);
-
             pixel_color += ray_color(&ray, &world, MAX_DEPTH);
         }
 
-        image.add_pixel(pixel_color, SAMPLES_PER_PIXEL);
+        image.add_pixel(pixel_color, N2);
     }
 
     image.write(r"render.png")?;
