@@ -1,7 +1,7 @@
 use crate::hit_record::HitRecord;
 use crate::material::Material;
 use crate::ray::Ray;
-use crate::vec3::*;
+use vec3::*;
 
 pub enum Object {
     Sphere(Sphere),

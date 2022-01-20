@@ -1,6 +1,6 @@
 use crate::material::*;
 use crate::ray::Ray;
-use crate::vec3::*;
+use vec3::*;
 
 pub struct HitRecord {
     pub point: Point3,

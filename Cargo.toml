@@ -1,14 +1,7 @@
-[package]
-name = "rtow"
-version = "0.1.0"
-edition = "2018"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+members = [
+    "rtow",
+    "vec3",
+]
 
-[dependencies]
-rand = "0.8.0"
-png = "0.17.2"
-
-[profile.release]
-debug = 1
-lto = false

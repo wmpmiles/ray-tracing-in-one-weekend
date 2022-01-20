@@ -1,6 +1,6 @@
 use crate::hit_record::HitRecord;
 use crate::ray::Ray;
-use crate::vec3::*;
+use vec3::*;
 
 #[derive(Copy, Clone)]
 pub enum Material {

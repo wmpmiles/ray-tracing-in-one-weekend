@@ -6,7 +6,7 @@ use rtow::image::Image;
 use rtow::material::*;
 use rtow::object::*;
 use rtow::ray::Ray;
-use rtow::vec3::*;
+use vec3::*;
 use rtow::sampler::SquareSampler;
 use rtow::config::Config;
 use std::env;

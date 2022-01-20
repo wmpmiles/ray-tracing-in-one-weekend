@@ -1,4 +1,4 @@
-use crate::vec3::Color;
+use vec3::Color;
 
 pub struct Image {
     pub aspect_ratio: f64,

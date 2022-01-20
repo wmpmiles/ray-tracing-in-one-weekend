@@ -206,6 +206,14 @@ version = "0.1.0"
 dependencies = [
  "png",
  "rand",
+ "vec3",
+]
+
+[[package]]
+name = "vec3"
+version = "0.1.0"
+dependencies = [
+ "rand",
 ]
 
 [[package]]
