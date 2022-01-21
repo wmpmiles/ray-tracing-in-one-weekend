@@ -142,6 +142,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "n_tuple"
+version = "0.1.0"
+
+[[package]]
 name = "png"
 version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -204,15 +208,8 @@ dependencies = [
 name = "rtow"
 version = "0.1.0"
 dependencies = [
+ "n_tuple",
  "png",
- "rand",
- "vec3",
-]
-
-[[package]]
-name = "vec3"
-version = "0.1.0"
-dependencies = [
  "rand",
 ]
 

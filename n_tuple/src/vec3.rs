@@ -1,15 +1,12 @@
+use crate::*;
+
 #[derive(Debug, PartialEq, Copy, Clone, Default)]
-pub struct Vec3 {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-}
+pub struct Vec3 (NTuple<f64, 3>);
 
 /* Behaviours:
  * - cannonical basis vectors
  * - create vec3 from x, y, z
- * - elementwise
- * - combine
+ * - element access
  * - calc quadrance
  * - calc length
  * - to unit vector
@@ -25,59 +22,49 @@ pub struct Vec3 {
  */
 
 impl Vec3 {
-    pub const E0: Vec3 = Vec3 { x: 1.0, y: 0.0, z: 0.0 };
-    pub const E1: Vec3 = Vec3 { x: 0.0, y: 1.0, z: 0.0 };
-    pub const E2: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 1.0 };
+    pub const E0: Vec3 = Vec3(ntuple!(1.0, 0.0, 0.0));
+    pub const E1: Vec3 = Vec3(ntuple!(0.0, 1.0, 0.0));
+    pub const E2: Vec3 = Vec3(ntuple!(0.0, 0.0, 1.0));
 
     pub fn new(x: f64, y: f64, z: f64) -> Self {
-        Self { x, y, z }
+        Self(ntuple!(x, y, z))
     }
 
-    pub fn elementwise<F>(self, f: F) -> Self
-    where
-        F: Fn(f64) -> f64,
-    {
-        Self {
-            x: f(self.x),
-            y: f(self.y),
-            z: f(self.z),
-        }
+    pub fn x(self) -> f64 {
+        self.0.0[0]
     }
 
-    pub fn combine<F>(self, rhs: Vec3, f: F) -> Self
-    where
-        F: Fn(f64, f64) -> f64,
-    {
-        Self {
-            x: f(self.x, rhs.x),
-            y: f(self.y, rhs.y),
-            z: f(self.z, rhs.z),
-        }
+    pub fn y(self) -> f64 {
+        self.0.0[1]
+    }
+
+    pub fn z(self) -> f64 {
+        self.0.0[2]
     }
 
     pub fn quadrance(self) -> f64 {
-        self.x * self.x + self.y * self.y + self.z * self.z
+        self.x() * self.x() + self.y() * self.y() + self.z() * self.z()
     }
 
     pub fn length(self) -> f64 {
         self.quadrance().sqrt()
     }
 
-    pub fn unit(self) -> Vec3 {
+    pub fn unit(self) -> Self {
         let length = self.length();
-        self.elementwise(|x| x / length)
+        Vec3(self.0.map(|x| x / length))
     }
 
     pub fn dot(self, rhs: Vec3) -> f64 {
-        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+        self.x() * rhs.x() + self.y() * rhs.y() + self.z() * rhs.z()
     }
 
     pub fn cross(self, rhs: Vec3) -> Vec3 {
-        Self {
-            x: self.y * rhs.z - self.z * rhs.y,
-            y: self.z * rhs.x - self.x * rhs.z,
-            z: self.x * rhs.y - self.y * rhs.x,
-        }
+        Self(ntuple!(
+            self.y() * rhs.z() - self.z() * rhs.y(),
+            self.z() * rhs.x() - self.x() * rhs.z(),
+            self.x() * rhs.y() - self.y() * rhs.x()
+        ))
     }
 
     pub fn projection(self, b: Self) -> Self {
@@ -94,7 +81,7 @@ impl std::ops::Add for Vec3 {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        self.combine(rhs, |x, y| x + y)
+        Self(self.0.combine(rhs.0, |x, y| x + y))
     }
 }
 
@@ -102,7 +89,7 @@ impl std::ops::Sub for Vec3 {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        self.combine(rhs, |x, y| x - y)
+        Self(self.0.combine(rhs.0, |x, y| x - y))
     }
 }
 
@@ -110,7 +97,7 @@ impl std::ops::Neg for Vec3 {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
-        self.elementwise(|x| -x)
+        Self(self.0.map(|x| -x))
     }
 }
 
@@ -118,7 +105,7 @@ impl std::ops::Mul<f64> for Vec3 {
     type Output = Self;
 
     fn mul(self, rhs: f64) -> Self::Output {
-        self.elementwise(|x| x * rhs)
+        Self(self.0.map(|x| x * rhs))
     }
 }
 
@@ -126,7 +113,7 @@ impl std::ops::Mul<Vec3> for f64 {
     type Output = Vec3;
 
     fn mul(self, rhs: Vec3) -> Self::Output {
-        rhs.elementwise(|x| x * self)
+        Vec3(rhs.0.map(|x| x * self))
     }
 }
 
@@ -134,7 +121,7 @@ impl std::ops::Div<f64> for Vec3 {
     type Output = Self;
 
     fn div(self, rhs: f64) -> Self::Output {
-        self.elementwise(|x| x / rhs)
+        Self(self.0.map(|x| x / rhs))
     }
 }
 
@@ -144,43 +131,25 @@ mod tests {
 
     #[test]
     fn cannonical_basis_vectors() {
-        assert_eq!(Vec3::E0.x, 1.0);
-        assert_eq!(Vec3::E0.y, 0.0);
-        assert_eq!(Vec3::E0.z, 0.0);
+        assert_eq!(Vec3::E0.x(), 1.0);
+        assert_eq!(Vec3::E0.y(), 0.0);
+        assert_eq!(Vec3::E0.z(), 0.0);
 
-        assert_eq!(Vec3::E1.x, 0.0);
-        assert_eq!(Vec3::E1.y, 1.0);
-        assert_eq!(Vec3::E1.z, 0.0);
+        assert_eq!(Vec3::E1.x(), 0.0);
+        assert_eq!(Vec3::E1.y(), 1.0);
+        assert_eq!(Vec3::E1.z(), 0.0);
 
-        assert_eq!(Vec3::E2.x, 0.0);
-        assert_eq!(Vec3::E2.y, 0.0);
-        assert_eq!(Vec3::E2.z, 1.0);
+        assert_eq!(Vec3::E2.x(), 0.0);
+        assert_eq!(Vec3::E2.y(), 0.0);
+        assert_eq!(Vec3::E2.z(), 1.0);
     }
 
     #[test]
     fn new_vector() {
         let v = Vec3::new(1.0, 2.0, 3.0);
-        assert_eq!(v.x, 1.0);
-        assert_eq!(v.y, 2.0);
-        assert_eq!(v.z, 3.0);
-    }
-
-    #[test]
-    fn elementwise_operation() {
-        let v = Vec3::new(2.0, 3.0, 4.0).elementwise(|x| x * x);
-        assert_eq!(v.x, 4.0);
-        assert_eq!(v.y, 9.0);
-        assert_eq!(v.z, 16.0);
-    }
-
-    #[test]
-    fn combine_vectors() {
-        let v1 = Vec3::new(3.0, 4.0, 5.0);
-        let v2 = Vec3::new(4.0, 5.0, 6.0);
-        let v3 = v1.combine(v2, |x, y| x * y);
-        assert_eq!(v3.x, 12.0);
-        assert_eq!(v3.y, 20.0);
-        assert_eq!(v3.z, 30.0);
+        assert_eq!(v.x(), 1.0);
+        assert_eq!(v.y(), 2.0);
+        assert_eq!(v.z(), 3.0);
     }
 
     #[test]
@@ -198,9 +167,9 @@ mod tests {
     #[test]
     fn unit_vector() {
         let v = Vec3::new(1.0, 2.0, 2.0).unit();
-        assert_eq!(v.x, 1.0 / 3.0);
-        assert_eq!(v.y, 2.0 / 3.0);
-        assert_eq!(v.z, 2.0 / 3.0);
+        assert_eq!(v.x(), 1.0 / 3.0);
+        assert_eq!(v.y(), 2.0 / 3.0);
+        assert_eq!(v.z(), 2.0 / 3.0);
     }
 
     #[test]
@@ -232,7 +201,8 @@ mod tests {
     #[test]
     fn negate_vector() {
         let v1 = Vec3::new(1.0, 1.0, 1.0);
-        assert_eq!(-v1, v1.elementwise(|x| -x));
+        let v2 = Vec3::new(-1.0, -1.0, -1.0);
+        assert_eq!(-v1, v2);
     }
 
     #[test]
