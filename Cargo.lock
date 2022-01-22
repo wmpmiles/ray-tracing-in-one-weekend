@@ -216,6 +216,7 @@ name = "rtow"
 version = "0.1.0"
 dependencies = [
  "geometry3d",
+ "n_tuple",
  "png",
  "rand",
 ]

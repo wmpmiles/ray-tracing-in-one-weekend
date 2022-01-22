@@ -21,18 +21,14 @@ impl Config {
         let mut sampler_n = 3;
         let mut max_depth = 50;
 
-        loop {
-            if let Some(arg) = args.next() {
-                match &arg[..] {
-                    "-f" => filename = args.next().unwrap(),
-                    "-w" => image_width = Self::arg_to_u32(&mut args),
-                    "-h" => image_height = Self::arg_to_u32(&mut args),
-                    "-n" => sampler_n = Self::arg_to_u32(&mut args),
-                    "-d" => max_depth = Self::arg_to_u32(&mut args),
-                    _ => (),
-                }
-            } else {
-                break;
+        while let Some(arg) = args.next() {
+            match &arg[..] {
+                "-f" => filename = args.next().unwrap(),
+                "-w" => image_width = Self::arg_to_u32(&mut args),
+                "-h" => image_height = Self::arg_to_u32(&mut args),
+                "-n" => sampler_n = Self::arg_to_u32(&mut args),
+                "-d" => max_depth = Self::arg_to_u32(&mut args),
+                _ => (),
             }
         }
 

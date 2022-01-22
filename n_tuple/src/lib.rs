@@ -19,9 +19,10 @@ impl<T, const N: usize> NTuple<T, N>
 where
     T: Copy + Clone + PartialEq + Default,
 {
-    pub fn map<F>(self, f: F) -> Self
+    pub fn map<F, U>(self, f: F) -> NTuple<U, N>
     where
-        F: Fn(T) -> T,
+        F: Fn(T) -> U,
+        U: Copy + Clone + PartialEq + Default
     {
         NTuple(self.0.map(f))
     }
@@ -89,7 +90,11 @@ mod tests {
     fn transform_tuple() {
         let t1 = NTuple::from([0; 4]);
         let t2 = NTuple::from([1; 4]);
-        assert_eq!(t1.map(|x| x + 1), t2)
+        assert_eq!(t1.map(|x| x + 1), t2);
+
+        let t3 = NTuple::from([3; 3]);
+        let t4 = NTuple::from([3.0; 3]);
+        assert_eq!(t3.map(|x| x as f64), t4);
     }
 
     #[test]

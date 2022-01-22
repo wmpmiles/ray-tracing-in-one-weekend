@@ -1,4 +1,4 @@
-use vec3::Color;
+use crate::color::*;
 
 pub struct Image {
     pub aspect_ratio: f64,
@@ -53,19 +53,10 @@ impl Image {
         Ok(())
     }
 
-    fn map_byte(val: f64) -> u8 {
-        let val = val.clamp(0.0, 1.0);
-        const RATIO: f64 = 255.999;
-        (RATIO * val) as u8
-    }
-
-    pub fn add_pixel(&mut self, color: Color, samples: u32) {
-        let scale = 1.0 / samples as f64;
-        let color = color.elementwise(|x| (scale * x).sqrt());
-
-        self.data.push(Self::map_byte(color.0));
-        self.data.push(Self::map_byte(color.1));
-        self.data.push(Self::map_byte(color.2));
+    pub fn add_pixel(&mut self, color: Rgb) {
+        self.data.push(color.r());
+        self.data.push(color.g());
+        self.data.push(color.b());
     }
 }
 

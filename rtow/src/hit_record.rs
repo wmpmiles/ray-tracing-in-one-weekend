@@ -1,6 +1,5 @@
 use crate::material::*;
-use crate::ray::Ray;
-use vec3::*;
+use geometry3d::*;
 
 pub struct HitRecord {
     pub point: Point3,
@@ -11,9 +10,19 @@ pub struct HitRecord {
 }
 
 impl HitRecord {
-    pub fn new(point: Point3, outward_normal: Vec3, ray_in: &Ray, material: Material, t: f64) -> HitRecord {
+    pub fn new(
+        point: Point3,
+        outward_normal: Vec3,
+        ray_in: Ray3,
+        material: Material,
+        t: f64,
+    ) -> HitRecord {
         let front_face = ray_in.direction.dot(outward_normal) < 0.0;
-        let normal = if front_face { outward_normal } else { -outward_normal };
+        let normal = if front_face {
+            outward_normal
+        } else {
+            -outward_normal
+        };
 
         HitRecord {
             point,
@@ -24,4 +33,3 @@ impl HitRecord {
         }
     }
 }
-

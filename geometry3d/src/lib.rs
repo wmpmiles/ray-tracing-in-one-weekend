@@ -52,16 +52,21 @@ impl Vec3 {
     }
 
     pub fn quadrance(self) -> f64 {
-        self.x() * self.x() + self.y() * self.y() + self.z() * self.z()
+        let s = Vec3(self.0.map(|x| x * x));
+        s.x() + s.y() + s.z()
     }
 
     pub fn length(self) -> f64 {
         self.quadrance().sqrt()
     }
 
-    pub fn unit(self) -> Self {
+    pub fn unit(self) -> Option<Self> {
         let length = self.length();
-        Vec3(self.0.map(|x| x / length))
+        if length == 0.0 {
+            None
+        } else {
+            Some(Vec3(self.0.map(|x| x / length)))
+        }
     }
 
     pub fn dot(self, rhs: Vec3) -> f64 {
@@ -181,10 +186,12 @@ mod vec3_tests {
 
     #[test]
     fn unit_vector() {
-        let v = Vec3::new(1.0, 2.0, 2.0).unit();
+        let v = Vec3::new(1.0, 2.0, 2.0).unit().unwrap();
         assert_eq!(v.x(), 1.0 / 3.0);
         assert_eq!(v.y(), 2.0 / 3.0);
         assert_eq!(v.z(), 2.0 / 3.0);
+        let n = Vec3::new(0.0, 0.0, 0.0).unit();
+        assert_eq!(n, None);
     }
 
     #[test]
@@ -398,4 +405,3 @@ mod ray3_tests {
         assert_eq!(ray.at(2.0), p2);
     }
 }
-

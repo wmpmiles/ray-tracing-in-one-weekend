@@ -1,5 +1,5 @@
-use crate::ray::Ray;
-use vec3::*;
+use geometry3d::*;
+use crate::random;
 
 pub struct Camera {
     origin: Point3,
@@ -26,18 +26,22 @@ impl Camera {
         let viewport_height = 2.0 * h;
         let viewport_width = aspect_ratio * viewport_height;
 
-        let w = Vec3::unit_vector(lookfrom - lookat).unwrap();
-        let u = Vec3::unit_vector(Vec3::cross(vup, w)).unwrap();
-        let v = Vec3::cross(w, u);
+        let w = match (lookfrom - lookat).unit() {
+            Some(vec) => vec,
+            None => panic!("lookfrom and lookat cannot be the same point."),
+        };
+        let u = match vup.cross(w).unit() {
+            Some(vec) => vec,
+            None => panic!("vup and the look direction cannot be parallel."),
+        };
+        let v = w.cross(u);
 
         let origin = lookfrom;
 
-        let horizontal = u.scalar_mul(focus_dist * viewport_width);
-        let vertical = v.scalar_mul(focus_dist * viewport_height);
+        let horizontal = focus_dist * viewport_width * u;
+        let vertical = focus_dist * viewport_height * v;
 
-        let scalar2 = Vec3::scalar(2.0);
-        let lower_left_corner =
-            origin - horizontal / scalar2 - vertical / scalar2 - w.scalar_mul(focus_dist);
+        let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - focus_dist * w;
 
         let lens_radius = aperture / 2.0;
 
@@ -52,18 +56,17 @@ impl Camera {
         }
     }
 
-    pub fn get_ray(&self, s: f64, t: f64) -> Ray {
-        let rd = Vec3::random_in_unit_disk().scalar_mul(self.lens_radius);
-        let offset = self.u.scalar_mul(rd.0) + self.v.scalar_mul(rd.1);
+    pub fn get_ray(&self, s: f64, t: f64) -> Ray3 {
+        let rd = self.lens_radius * random::in_disk();
+        let offset = rd.x() * self.u + rd.y() * self.v;
 
         let origin = self.origin + offset;
-        let direction =
-            (self.lower_left_corner + self.horizontal.scalar_mul(s) + self.vertical.scalar_mul(t)
-                - self.origin
-                - offset)
-                .unit_vector()
-                .unwrap();
+        let direction = (self.lower_left_corner + s * self.horizontal + t * self.vertical
+            - self.origin
+            - offset)
+            .unit()
+            .unwrap();
 
-        Ray { origin, direction }
+        Ray3 { origin, direction }
     }
 }

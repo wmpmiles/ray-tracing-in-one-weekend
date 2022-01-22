@@ -6,3 +6,6 @@ members = [
     "geometry3d"
 ]
 
+[profile.release]
+debug = true
+

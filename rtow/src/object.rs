@@ -1,7 +1,6 @@
 use crate::hit_record::HitRecord;
 use crate::material::Material;
-use crate::ray::Ray;
-use vec3::*;
+use geometry3d::*;
 
 pub enum Object {
     Sphere(Sphere),
@@ -9,7 +8,7 @@ pub enum Object {
 }
 
 impl Object {
-    pub fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+    pub fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
         match self {
             Object::Sphere(sphere) => sphere.hit(ray, t_min, t_max),
             Object::List(list) => list.hit(ray, t_min, t_max),
@@ -32,7 +31,7 @@ impl Sphere {
         })
     }
 
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+    fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let oc = ray.origin - self.center;
         let a = ray.direction.dot(ray.direction);
         let half_b = ray.direction.dot(oc);
@@ -55,7 +54,7 @@ impl Sphere {
 
         let t = root;
         let point = ray.at(t);
-        let outward_normal = (point - self.center).scalar_div(self.radius).unwrap();
+        let outward_normal = (point - self.center) / self.radius;
         let material = self.material;
 
         Some(HitRecord::new(point, outward_normal, ray, material, t))
@@ -77,7 +76,7 @@ impl List {
         self.objects.push(object);
     }
 
-    pub fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+    pub fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let mut closest: Option<HitRecord> = None;
 
         for object in &self.objects {
