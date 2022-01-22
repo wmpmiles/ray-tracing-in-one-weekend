@@ -3,5 +3,6 @@
 members = [
     "rtow",
     "n_tuple",
+    "geometry3d"
 ]
 

@@ -115,6 +115,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a246d82be1c9d791c5dfde9a2bd045fc3cbba3fa2b11ad558f27d01712f00569"
 
 [[package]]
+name = "geometry3d"
+version = "0.1.0"
+dependencies = [
+ "n_tuple",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -208,7 +215,7 @@ dependencies = [
 name = "rtow"
 version = "0.1.0"
 dependencies = [
- "n_tuple",
+ "geometry3d",
  "png",
  "rand",
 ]
