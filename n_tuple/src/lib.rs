@@ -42,6 +42,7 @@ where
     where
         F: Fn(T, T) -> T,
     {
+        assert!(N > 0, "Cannot reduce the 0-tuple.");
         let mut acc = self[0];
         for i in 1..N {
             acc = f(acc, self[i]);
