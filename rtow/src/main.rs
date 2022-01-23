@@ -84,8 +84,7 @@ fn random_scene() -> Object {
     const SMALL_RADIUS: f64 = 0.2;
     let one = FloatRgb::new(1.0, 1.0, 1.0);
 
-    let mut rng = StdRng::seed_from_u64(0);
-    let mut rng = Random::new(&mut rng);
+    let mut rng = Random::new(StdRng::seed_from_u64(0));
 
     let mut world = List::new();
 

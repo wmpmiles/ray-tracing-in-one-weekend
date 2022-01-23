@@ -117,9 +117,11 @@ mod tests {
     }
 
     #[test]
-    fn reduce_tuples() {
+    fn fold_tuples() {
         let t1 = ntuple!(1, 2, 3);
         assert_eq!(t1.reduce(|acc, x| acc + x), 6);
+        let t2 = NTuple::from([0; 0]);
+        assert_eq!(t2.reduce(|acc, x| acc + x), 0);
     }
 }
 

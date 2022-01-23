@@ -39,8 +39,7 @@ impl Lambertian {
         // unit normal + unit vector guaranteed to lie in or above the
         // tangent plane, thus only need to account for the case of
         // a direction vector of zero length
-        let mut rng = rand::thread_rng();
-        let mut rng = Random::new(&mut rng);
+        let mut rng = Random::new(rand::thread_rng());
         let scatter = rec.normal + rng.unit_vector();
         let direction = match scatter.unit() {
             Some(vec) => vec,
@@ -72,8 +71,7 @@ impl Metal {
 
         // calculate pure specular reflection vector
         let reflection = ray_in.direction.reflection(rec.normal);
-        let mut rng = rand::thread_rng();
-        let mut rng = Random::new(&mut rng);
+        let mut rng = Random::new(rand::thread_rng());
         let mut direction;
         loop {
             direction = reflection + self.fuzz * rng.in_unit_sphere();

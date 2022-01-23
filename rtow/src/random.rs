@@ -6,19 +6,19 @@
 
 use crate::color::*;
 use geometry3d::*;
-use rand::{Rng, RngCore};
+use rand::{Rng};
 use rand::distributions::{Standard, Distribution};
 
-pub struct Random<'a>(&'a mut dyn RngCore);
+pub struct Random<T: Rng>(T);
 
-impl<'a> Random<'a> {
-    pub fn new(rng: &'a mut dyn RngCore) -> Self {
+impl<T: Rng> Random<T> {
+    pub fn new(rng: T) -> Self {
         Random(rng)
     }
 
-    pub fn random<T>(&mut self) -> T 
+    pub fn random<S>(&mut self) -> S 
     where
-        Standard: Distribution<T>
+        Standard: Distribution<S>
     {
         self.0.gen()
     }
