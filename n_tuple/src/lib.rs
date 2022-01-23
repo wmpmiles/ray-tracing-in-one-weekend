@@ -37,6 +37,17 @@ where
         }
         NTuple(result)
     }
+
+    pub fn reduce<F>(self, f: F) -> T
+    where
+        F: Fn(T, T) -> T,
+    {
+        let mut acc = self[0];
+        for i in 1..N {
+            acc = f(acc, self[i]);
+        }
+        acc
+    }
 }
 
 impl<T, const N: usize> Default for NTuple<T, N>
@@ -103,6 +114,12 @@ mod tests {
         let t2 = ntuple!(5, 3, 2, 1, 1, 0);
         let t3 = ntuple!(5, 4, 3, 3, 4, 5);
         assert_eq!(t1.combine(t2, |x, y| x + y), t3);
+    }
+
+    #[test]
+    fn reduce_tuples() {
+        let t1 = ntuple!(1, 2, 3);
+        assert_eq!(t1.reduce(|acc, x| acc + x), 6);
     }
 }
 
