@@ -8,6 +8,7 @@ pub enum Object {
 }
 
 impl Object {
+    #[inline(always)]
     pub fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
         match self {
             Object::Sphere(sphere) => sphere.hit(ray, t_min, t_max),
@@ -31,6 +32,7 @@ impl Sphere {
         })
     }
 
+    #[inline(always)]
     fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let oc = ray.origin - self.center;
         let a = ray.direction.dot(ray.direction);
