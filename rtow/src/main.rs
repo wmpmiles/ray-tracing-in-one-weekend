@@ -1,5 +1,4 @@
 use rand::rngs::StdRng;
-use rand::Rng;
 use rand::SeedableRng;
 use rtow::camera::Camera;
 use rtow::image::Image;
@@ -8,7 +7,7 @@ use rtow::object::*;
 use rtow::sampler::SquareSampler;
 use rtow::config::Config;
 use rtow::color::*;
-use rtow::random;
+use rtow::random::Random;
 use geometry3d::*;
 use std::env;
 
@@ -86,7 +85,7 @@ fn random_scene() -> Object {
     let one = FloatRgb::new(1.0, 1.0, 1.0);
 
     let mut rng = StdRng::seed_from_u64(0);
-    let random: &mut dyn FnMut() -> f64 = &mut || rng.gen();
+    let mut rng = Random::new(&mut rng);
 
     let mut world = List::new();
 
@@ -101,16 +100,16 @@ fn random_scene() -> Object {
             let a = a as f64;
             let b = b as f64;
 
-            let choose_mat: f64 = random();
-            let center = Point3::new(a + 0.9 * random(), 0.2, b + 0.9 * random());
+            let choose_mat: f64 = rng.random();
+            let center = Point3::new(a + 0.9 * rng.random::<f64>(), 0.2, b + 0.9 * rng.random::<f64>());
 
             if (center - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 let material = if choose_mat < 0.8 {
-                    let albedo = random::color() * random::color();
+                    let albedo = rng.color() * rng.color();
                     Lambertian::new(albedo)
                 } else if choose_mat < 0.95 {
-                    let albedo = random::color().mix(one, 0.5);
-                    let fuzz = random() / 2.0;
+                    let albedo = rng.color().mix(one, 0.5);
+                    let fuzz = rng.random::<f64>() / 2.0;
                     Metal::new(albedo, fuzz)
                 } else {
                     Dielectric::new(1.5)

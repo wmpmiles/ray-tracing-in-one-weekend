@@ -1,6 +1,6 @@
 use crate::hit_record::HitRecord;
 use crate::color::FloatRgb;
-use crate::random;
+use crate::random::Random;
 use geometry3d::*;
 
 #[derive(Copy, Clone)]
@@ -39,7 +39,9 @@ impl Lambertian {
         // unit normal + unit vector guaranteed to lie in or above the
         // tangent plane, thus only need to account for the case of
         // a direction vector of zero length
-        let scatter = rec.normal + random::unit_vector();
+        let mut rng = rand::thread_rng();
+        let mut rng = Random::new(&mut rng);
+        let scatter = rec.normal + rng.unit_vector();
         let direction = match scatter.unit() {
             Some(vec) => vec,
             None => rec.normal,
@@ -70,9 +72,11 @@ impl Metal {
 
         // calculate pure specular reflection vector
         let reflection = ray_in.direction.reflection(rec.normal);
+        let mut rng = rand::thread_rng();
+        let mut rng = Random::new(&mut rng);
         let mut direction;
         loop {
-            direction = reflection + self.fuzz * random::in_unit_sphere();
+            direction = reflection + self.fuzz * rng.in_unit_sphere();
 
             // only accept direction vectors that have some length and
             // lie above the plane tangent to the sphere at the point

@@ -1,5 +1,5 @@
 use geometry3d::*;
-use crate::random;
+use crate::random::Random;
 
 pub struct Camera {
     origin: Point3,
@@ -57,7 +57,9 @@ impl Camera {
     }
 
     pub fn get_ray(&self, s: f64, t: f64) -> Ray3 {
-        let rd = self.lens_radius * random::in_disk();
+        let mut rng = rand::thread_rng();
+        let mut rng = Random::new(&mut rng);
+        let rd = self.lens_radius * rng.in_unit_disk();
         let offset = rd.x() * self.u + rd.y() * self.v;
 
         let origin = self.origin + offset;
