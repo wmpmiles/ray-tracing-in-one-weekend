@@ -27,7 +27,7 @@ impl Rgb {
 
 impl std::convert::From<FloatRgb> for Rgb {
     fn from(frgb: FloatRgb) -> Self {
-        Self(frgb.0.map(|x| (x * 256.0) as u8))
+        Self(frgb.0.map(|x| (x.sqrt() * (256.0 - f64::EPSILON)) as u8))
     }
 }
 
