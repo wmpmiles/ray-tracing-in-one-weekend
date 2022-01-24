@@ -49,8 +49,8 @@ impl Camera {
 
         let lens_radius = aperture / 2.0;
 
-        let time_min = match time_min { Some(t) => t, None => 0.0 };
-        let time_max = match time_max { Some(t) => t, None => 0.0 };
+        let time_min = time_min.unwrap_or(0.0);
+        let time_max = time_max.unwrap_or(0.0);
 
         Camera {
             origin,

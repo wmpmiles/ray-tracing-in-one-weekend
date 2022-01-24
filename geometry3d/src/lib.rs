@@ -69,7 +69,6 @@ impl Vec3 {
         }
     }
 
-    #[inline(always)]
     pub fn dot(self, rhs: Vec3) -> f64 {
         self.0.combine(rhs.0, |x, y| x * y).reduce(|acc, x| acc + x)
     }

@@ -88,13 +88,18 @@ fn random_scene() -> Object {
     const SMALL_RADIUS: f64 = 0.2;
     const TIME: f64 = 0.0;
     let white = FloatRgb::new(1.0, 1.0, 1.0);
-    let perturbation = Vec3::new(0.0, 0.25, 0.0);
+    let perturbed = Vec3::new(0.0, 0.25, 0.0);
+    let still = Vec3::new(0.0, 0.0, 0.0);
 
     let mut rng = Random::new(StdRng::seed_from_u64(0));
 
     let mut world = List::new();
 
-    let ground_center = Location::Point(Point3::new(0.0, -1000.0, 0.0));
+    let ground_center = Ray3 {
+        origin: Point3::new(0.0, -1000.0, 0.0),
+        direction: still,
+        time: TIME,
+    };
     let ground_radius = 1000.0;
     let ground_material = Lambertian::new(FloatRgb::new(0.5, 0.5, 0.5));
     let ground = Sphere::new(ground_center, ground_radius, ground_material);
@@ -111,16 +116,15 @@ fn random_scene() -> Object {
                 0.2,
                 b + 0.9 * rng.random::<f64>(),
             );
-            let mut center = Location::Point(center_point);
+            let mut center = Ray3 {
+                origin: center_point,
+                direction: still,
+                time: TIME,
+            };
 
             if (center_point - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 let material = if choose_mat < 0.8 {
-                    let center_ray = Ray3 { 
-                        origin: center_point, 
-                        direction: perturbation, 
-                        time: TIME 
-                    };
-                    center = Location::Ray(center_ray);
+                    center.direction = perturbed;
                     let albedo = rng.color() * rng.color();
                     Lambertian::new(albedo)
                 } else if choose_mat < 0.95 {
@@ -137,9 +141,21 @@ fn random_scene() -> Object {
         }
     }
 
-    let center1 = Location::Point(Point3::new(0.0, 1.0, 0.0));
-    let center2 = Location::Point(Point3::new(-4.0, 1.0, 0.0));
-    let center3 = Location::Point(Point3::new(4.0, 1.0, 0.0));
+    let center1 = Ray3 {
+        origin: Point3::new(0.0, 1.0, 0.0),
+        direction: still,
+        time: TIME,
+    };
+    let center2 = Ray3 {
+        origin: Point3::new(-4.0, 1.0, 0.0),
+        direction: still,
+        time: TIME,
+    };
+    let center3 = Ray3 {
+        origin: Point3::new(4.0, 1.0, 0.0),
+        direction: still,
+        time: TIME,
+    };
 
     const LARGE_RADIUS: f64 = 1.0;
 

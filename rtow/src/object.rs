@@ -8,7 +8,6 @@ pub enum Object {
 }
 
 impl Object {
-    #[inline(always)]
     pub fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
         match self {
             Object::Sphere(sphere) => sphere.hit(ray, t_min, t_max),
@@ -17,19 +16,14 @@ impl Object {
     }
 }
 
-pub enum Location {
-    Ray(Ray3),
-    Point(Point3),
-}
-
 pub struct Sphere {
-    location: Location,
+    location: Ray3,
     radius: f64,
     material: Material,
 }
 
 impl Sphere {
-    pub fn new(location: Location, radius: f64, material: Material) -> Object {
+    pub fn new(location: Ray3, radius: f64, material: Material) -> Object {
         Object::Sphere(Self {
             location,
             radius,
@@ -37,17 +31,8 @@ impl Sphere {
         })
     }
 
-    #[inline(always)]
-    fn center(&self, time: f64) -> Point3 {
-        match self.location {
-            Location::Ray(r) => r.at(time - r.time),
-            Location::Point(p) => p,
-        }
-    }
-
-    #[inline(always)]
     fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
-        let center = self.center(ray.time);
+        let center = self.location.at(ray.time - self.location.time);
 
         let oc = ray.origin - center;
         let a = ray.direction.dot(ray.direction);
