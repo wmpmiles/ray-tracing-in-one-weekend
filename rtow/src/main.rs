@@ -1,14 +1,14 @@
+use geometry3d::*;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rtow::camera::Camera;
+use rtow::color::*;
+use rtow::config::Config;
 use rtow::image::Image;
 use rtow::material::*;
 use rtow::object::*;
-use rtow::sampler::SquareSampler;
-use rtow::config::Config;
-use rtow::color::*;
 use rtow::random::Random;
-use geometry3d::*;
+use rtow::sampler::SquareSampler;
 use std::env;
 
 fn main() -> std::io::Result<()> {
@@ -28,6 +28,8 @@ fn main() -> std::io::Result<()> {
     let vfov = 20.0;
     let dist_to_focus = 10.0;
     let aperture = 0.1;
+    let time_min = Some(0.0);
+    let time_max = Some(1.0);
 
     let camera = Camera::new(
         lookfrom,
@@ -37,8 +39,10 @@ fn main() -> std::io::Result<()> {
         image.aspect_ratio,
         aperture,
         dist_to_focus,
+        time_min,
+        time_max,
     );
-    
+
     // Sampler
     let sampler = SquareSampler::new(image.width, image.height, config.sampler_n);
 
@@ -61,7 +65,7 @@ fn main() -> std::io::Result<()> {
 }
 
 fn ray_color(ray: Ray3, world: &Object, depth: u32) -> FloatRgb {
-    let one  = FloatRgb::new(1.0, 1.0, 1.0);
+    let one = FloatRgb::new(1.0, 1.0, 1.0);
     let base = FloatRgb::new(0.5, 0.7, 1.0);
     let none = FloatRgb::new(0.0, 0.0, 0.0);
     const MIN: f64 = 0.001; // minimize hitting the same point due to floating point approximation
@@ -82,13 +86,15 @@ fn ray_color(ray: Ray3, world: &Object, depth: u32) -> FloatRgb {
 
 fn random_scene() -> Object {
     const SMALL_RADIUS: f64 = 0.2;
-    let one = FloatRgb::new(1.0, 1.0, 1.0);
+    const TIME: f64 = 0.0;
+    let white = FloatRgb::new(1.0, 1.0, 1.0);
+    let perturbation = Vec3::new(0.0, 0.25, 0.0);
 
     let mut rng = Random::new(StdRng::seed_from_u64(0));
 
     let mut world = List::new();
 
-    let ground_center = Point3::new(0.0, -1000.0, 0.0);
+    let ground_center = Location::Point(Point3::new(0.0, -1000.0, 0.0));
     let ground_radius = 1000.0;
     let ground_material = Lambertian::new(FloatRgb::new(0.5, 0.5, 0.5));
     let ground = Sphere::new(ground_center, ground_radius, ground_material);
@@ -100,14 +106,25 @@ fn random_scene() -> Object {
             let b = b as f64;
 
             let choose_mat: f64 = rng.random();
-            let center = Point3::new(a + 0.9 * rng.random::<f64>(), 0.2, b + 0.9 * rng.random::<f64>());
+            let center_point = Point3::new(
+                a + 0.9 * rng.random::<f64>(),
+                0.2,
+                b + 0.9 * rng.random::<f64>(),
+            );
+            let mut center = Location::Point(center_point);
 
-            if (center - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
+            if (center_point - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 let material = if choose_mat < 0.8 {
+                    let center_ray = Ray3 { 
+                        origin: center_point, 
+                        direction: perturbation, 
+                        time: TIME 
+                    };
+                    center = Location::Ray(center_ray);
                     let albedo = rng.color() * rng.color();
                     Lambertian::new(albedo)
                 } else if choose_mat < 0.95 {
-                    let albedo = rng.color().mix(one, 0.5);
+                    let albedo = rng.color().mix(white, 0.5);
                     let fuzz = rng.random::<f64>() / 2.0;
                     Metal::new(albedo, fuzz)
                 } else {
@@ -120,9 +137,9 @@ fn random_scene() -> Object {
         }
     }
 
-    let center1 = Point3::new(0.0, 1.0, 0.0);
-    let center2 = Point3::new(-4.0, 1.0, 0.0);
-    let center3 = Point3::new(4.0, 1.0, 0.0);
+    let center1 = Location::Point(Point3::new(0.0, 1.0, 0.0));
+    let center2 = Location::Point(Point3::new(-4.0, 1.0, 0.0));
+    let center3 = Location::Point(Point3::new(4.0, 1.0, 0.0));
 
     const LARGE_RADIUS: f64 = 1.0;
 

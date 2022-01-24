@@ -7,7 +7,7 @@
 use crate::color::*;
 use geometry3d::*;
 use rand::{Rng};
-use rand::distributions::{Standard, Distribution};
+use rand::distributions::{Standard, Distribution, uniform::{SampleUniform, SampleRange}};
 
 pub struct Random<T: Rng>(T);
 
@@ -21,6 +21,14 @@ impl<T: Rng> Random<T> {
         Standard: Distribution<S>
     {
         self.0.gen()
+    }
+
+    pub fn random_range<S, R>(&mut self, range: R) -> S
+    where
+        S: SampleUniform,
+        R: SampleRange<S>,
+    {
+        self.0.gen_range(range)
     }
 
     pub fn color(&mut self) -> FloatRgb {

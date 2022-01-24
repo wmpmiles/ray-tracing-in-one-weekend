@@ -367,11 +367,12 @@ mod point3_tests {
 pub struct Ray3 {
     pub origin: Point3,
     pub direction: Vec3,
+    pub time: f64,
 }
 
 /* Behaviours:
- * - Create ray
- * - Access ray origin and direction
+ * - Create ray at time
+ * - Access ray origin, direction, and time
  * - Calculate point on ray at some multiple of direction
  */
 
@@ -389,16 +390,19 @@ mod ray3_tests {
     fn create_and_access() {
         let origin = Point3::new(0.0, 0.0, 0.0);
         let direction = Vec3::e0();
-        let ray = Ray3 { origin, direction };
+        let time = 0.0;
+        let ray = Ray3 { origin, direction, time };
         assert_eq!(origin, ray.origin);
         assert_eq!(direction, ray.direction);
+        assert_eq!(time, ray.time);
     }
 
     #[test]
     fn at() {
         let origin = Point3::new(0.0, 0.0, 0.0);
         let direction = Vec3::e0();
-        let ray = Ray3 { origin, direction };
+        let time = 0.0;
+        let ray = Ray3 { origin, direction, time };
 
         let p1 = origin + direction;
         let p2 = origin + 2.0 * direction;

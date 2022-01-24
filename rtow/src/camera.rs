@@ -9,6 +9,8 @@ pub struct Camera {
     u: Vec3,
     v: Vec3,
     lens_radius: f64,
+    time_min: f64,
+    time_max: f64,
 }
 
 impl Camera {
@@ -20,6 +22,8 @@ impl Camera {
         aspect_ratio: f64,
         aperture: f64,
         focus_dist: f64,
+        time_min: Option<f64>,
+        time_max: Option<f64>,
     ) -> Camera {
         let theta = vfov.to_radians();
         let h = f64::tan(theta / 2.0);
@@ -45,6 +49,9 @@ impl Camera {
 
         let lens_radius = aperture / 2.0;
 
+        let time_min = match time_min { Some(t) => t, None => 0.0 };
+        let time_max = match time_max { Some(t) => t, None => 0.0 };
+
         Camera {
             origin,
             horizontal,
@@ -53,6 +60,8 @@ impl Camera {
             u,
             v,
             lens_radius,
+            time_min,
+            time_max,
         }
     }
 
@@ -67,7 +76,8 @@ impl Camera {
             - offset)
             .unit()
             .unwrap();
+        let time = rng.random_range(self.time_min..=self.time_max);
 
-        Ray3 { origin, direction }
+        Ray3 { origin, direction, time }
     }
 }

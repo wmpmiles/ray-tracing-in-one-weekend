@@ -17,24 +17,39 @@ impl Object {
     }
 }
 
+pub enum Location {
+    Ray(Ray3),
+    Point(Point3),
+}
+
 pub struct Sphere {
-    center: Point3,
+    location: Location,
     radius: f64,
     material: Material,
 }
 
 impl Sphere {
-    pub fn new(center: Point3, radius: f64, material: Material) -> Object {
+    pub fn new(location: Location, radius: f64, material: Material) -> Object {
         Object::Sphere(Self {
-            center,
+            location,
             radius,
             material,
         })
     }
 
     #[inline(always)]
+    fn center(&self, time: f64) -> Point3 {
+        match self.location {
+            Location::Ray(r) => r.at(time - r.time),
+            Location::Point(p) => p,
+        }
+    }
+
+    #[inline(always)]
     fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
-        let oc = ray.origin - self.center;
+        let center = self.center(ray.time);
+
+        let oc = ray.origin - center;
         let a = ray.direction.dot(ray.direction);
         let half_b = ray.direction.dot(oc);
         let c = oc.dot(oc) - self.radius * self.radius;
@@ -56,7 +71,7 @@ impl Sphere {
 
         let t = root;
         let point = ray.at(t);
-        let outward_normal = (point - self.center) / self.radius;
+        let outward_normal = (point - center) / self.radius;
         let material = self.material;
 
         Some(HitRecord::new(point, outward_normal, ray, material, t))

@@ -13,7 +13,7 @@ pub enum Material {
 impl Material {
     pub fn scatter(self, ray_in: Ray3, rec: &HitRecord) -> Option<(FloatRgb, Ray3)> {
         match self {
-            Self::Lambertian(lambertian) => lambertian.scatter(rec),
+            Self::Lambertian(lambertian) => lambertian.scatter(rec, ray_in),
             Self::Metal(metal) => metal.scatter(rec, ray_in),
             Self::Dielectric(dielectric) => dielectric.scatter(rec, ray_in),
         }
@@ -30,7 +30,7 @@ impl Lambertian {
         Material::Lambertian( Lambertian { albedo } )
     }
 
-    fn scatter(self, rec: &HitRecord) -> Option<(FloatRgb, Ray3)> {
+    fn scatter(self, rec: &HitRecord, ray_in: Ray3) -> Option<(FloatRgb, Ray3)> {
         // reject internal reflections from opaque material
         if !rec.front_face {
             return None;
@@ -47,8 +47,9 @@ impl Lambertian {
         };
 
         let origin = rec.point;
+        let time = ray_in.time;
 
-        Some((self.albedo, Ray3 { origin, direction }))
+        Some((self.albedo, Ray3 { origin, direction, time }))
     }
 }
 
@@ -88,8 +89,9 @@ impl Metal {
         direction = direction.unit().unwrap();
 
         let origin = rec.point;
+        let time = ray_in.time;
 
-        Some((self.albedo, Ray3 { origin, direction }))
+        Some((self.albedo, Ray3 { origin, direction, time }))
     }
 }
 
@@ -139,7 +141,8 @@ impl Dielectric {
         };
 
         let origin = rec.point;
+        let time = ray_in.time;
 
-        Some((FloatRgb::new(1.0, 1.0, 1.0), Ray3 { origin, direction }))
+        Some((FloatRgb::new(1.0, 1.0, 1.0), Ray3 { origin, direction, time }))
     }
 }
