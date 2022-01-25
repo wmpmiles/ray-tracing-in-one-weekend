@@ -22,20 +22,21 @@ where
     pub fn map<F, U>(self, f: F) -> NTuple<U, N>
     where
         F: Fn(T) -> U,
-        U: Copy + Clone + PartialEq + Default
+        U: Copy + Clone + PartialEq + Default,
     {
         NTuple(self.0.map(f))
     }
 
-    pub fn combine<F>(self, rhs: Self, f: F) -> Self 
+    pub fn combine<F, U>(self, rhs: Self, f: F) -> NTuple<U, N>
     where
-        F: Fn(T, T) -> T,
+        F: Fn(T, T) -> U,
+        U: Copy + Clone + PartialEq + Default,
     {
-        let mut result = self.0;
+        let mut result: NTuple<U, N> = NTuple::default();
         for i in 0..N {
-            result[i] = f(self.0[i], rhs.0[i]);
+            result.0[i] = f(self[i], rhs[i]);
         }
-        NTuple(result)
+        result
     }
 
     pub fn reduce<F>(self, f: F) -> T
@@ -45,6 +46,17 @@ where
         assert!(N > 0, "Cannot reduce the 0-tuple.");
         let mut acc = self[0];
         for i in 1..N {
+            acc = f(acc, self[i]);
+        }
+        acc
+    }
+
+    pub fn fold<F>(self, start: T, f: F) -> T
+    where
+        F: Fn(T, T) -> T,
+    {
+        let mut acc = start;
+        for i in 0..N {
             acc = f(acc, self[i]);
         }
         acc

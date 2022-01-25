@@ -1,65 +1,83 @@
+//! # Geometry 3D
+//!
+//! `geometry3d` is a collection of structures and associated functions that
+//! reperesent 3D Cartesian geometry concepts such as points, vectors, and rays
+//! using double precision floating-point values.
+//!
+//! ## Caution
+//!
+//! It should be noted that the values and methods here are all floating-point
+//! approximations and as such will potentially have small errors and will
+//! display numeric instability in some cases.
+
 use n_tuple::*;
 
+/// 3D Euclidean vector.
+///
+/// # Examples
+/// ```
+/// use geometry3d::Vec3;
+///
+/// let v1 = Vec3::new(1.0, 2.0, 3.0);
+/// let v2 = Vec3::e1();
+///
+/// assert_eq!(v1.dot(v2), 2.0);
+/// ```
+///
+/// `e0()` through `e2()` are the standard basis vectors.
+///
 #[derive(Debug, PartialEq, Copy, Clone, Default)]
 pub struct Vec3(NTuple<f64, 3>);
 
-/* Behaviours:
- * - cannonical basis vectors
- * - create vec3 from x, y, z
- * - element access
- * - calc quadrance
- * - calc length
- * - to unit vector
- * - dot product
- * - cross product
- * - add
- * - subtract
- * - negate
- * - scalar multiplication
- * - scalar division
- * - projection
- * - reflection
- * - position vector from point
- */
-
 impl Vec3 {
+    /// The first standard basis vector (1, 0, 0).
     pub fn e0() -> Self {
         Vec3(ntuple!(1.0, 0.0, 0.0))
     }
 
+    /// The second standard basis vector (0, 1, 0).
     pub fn e1() -> Self {
         Vec3(ntuple!(0.0, 1.0, 0.0))
     }
 
+    /// The third standard basis vector (0, 0, 1).
     pub fn e2() -> Self {
         Vec3(ntuple!(0.0, 0.0, 1.0))
     }
 
+    /// Create a new `Vec3`. The vector (x, y, z) is equivalent to
+    /// `x * e0 + y * e1 + z * e2`.
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self(ntuple!(x, y, z))
     }
 
+    /// The coefficient of the first basis vector.
     pub fn x(self) -> f64 {
         self.0[0]
     }
 
+    /// The coefficient of the second basis vector.
     pub fn y(self) -> f64 {
         self.0[1]
     }
 
+    /// The coefficient of the third basis vector.
     pub fn z(self) -> f64 {
         self.0[2]
     }
 
+    /// The square of the Euclidean length of the vector.
     pub fn quadrance(self) -> f64 {
         let s = Vec3(self.0.map(|x| x * x));
         s.x() + s.y() + s.z()
     }
 
+    /// The Euclidean length of the vector.
     pub fn length(self) -> f64 {
         self.quadrance().sqrt()
     }
 
+    /// The vector scaled such that the length of the resulting vector is 1.
     pub fn unit(self) -> Option<Self> {
         let length = self.length();
         if length == 0.0 {
@@ -69,10 +87,13 @@ impl Vec3 {
         }
     }
 
+    /// The dot product of two vectors.
     pub fn dot(self, rhs: Vec3) -> f64 {
         self.0.combine(rhs.0, |x, y| x * y).reduce(|acc, x| acc + x)
     }
 
+    /// The cross product of the left hand vector by the right hand vector i.e.
+    /// `a.cross(b)` is the cross of `a` by `b`.
     pub fn cross(self, rhs: Vec3) -> Vec3 {
         Self(ntuple!(
             self.y() * rhs.z() - self.z() * rhs.y(),
@@ -81,218 +102,116 @@ impl Vec3 {
         ))
     }
 
+    /// The projection of the left vector onto the right vector i.e.
+    /// `a.projection(b)` is the projection of `a` onto `b`.
     pub fn projection(self, b: Self) -> Self {
         let a = self;
         a.dot(b) / b.quadrance() * b
     }
 
+    /// The reflection of the left vector across the plane through the origin
+    /// and normal to the right vector.
     pub fn reflection(self, normal: Self) -> Self {
         self - 2.0 * self.projection(normal)
     }
 }
 
+/// Sum of two vectors.
 impl std::ops::Add for Vec3 {
-    type Output = Self;
+    type Output = Vec3;
 
-    fn add(self, rhs: Self) -> Self::Output {
+    fn add(self, rhs: Self) -> Vec3 {
         Self(self.0.combine(rhs.0, |x, y| x + y))
     }
 }
 
+/// Difference of two vectors.
 impl std::ops::Sub for Vec3 {
-    type Output = Self;
+    type Output = Vec3;
 
-    fn sub(self, rhs: Self) -> Self::Output {
+    fn sub(self, rhs: Self) -> Vec3 {
         Self(self.0.combine(rhs.0, |x, y| x - y))
     }
 }
 
+/// Negative of the vector.
 impl std::ops::Neg for Vec3 {
-    type Output = Self;
+    type Output = Vec3;
 
-    fn neg(self) -> Self::Output {
+    fn neg(self) -> Vec3 {
         Self(self.0.map(|x| -x))
     }
 }
 
-impl std::ops::Mul<f64> for Vec3 {
-    type Output = Self;
-
-    fn mul(self, rhs: f64) -> Self::Output {
-        Self(self.0.map(|x| x * rhs))
-    }
-}
-
+/// Scale the vector by the scalar.
 impl std::ops::Mul<Vec3> for f64 {
     type Output = Vec3;
 
-    fn mul(self, rhs: Vec3) -> Self::Output {
+    fn mul(self, rhs: Vec3) -> Vec3 {
         Vec3(rhs.0.map(|x| x * self))
     }
 }
 
+/// Scale vector by the reciprocal of the divisor.
 impl std::ops::Div<f64> for Vec3 {
     type Output = Self;
 
-    fn div(self, rhs: f64) -> Self::Output {
+    fn div(self, rhs: f64) -> Vec3 {
         Self(self.0.map(|x| x / rhs))
     }
 }
 
+/// Position vector from point.
 impl std::convert::From<Point3> for Vec3 {
-    fn from(point: Point3) -> Self {
+    fn from(point: Point3) -> Vec3 {
         Vec3(ntuple!(point.x(), point.y(), point.z()))
     }
 }
 
-#[cfg(test)]
-mod vec3_tests {
-    use super::*;
-
-    #[test]
-    fn cannonical_basis_vectors() {
-        assert_eq!(Vec3::e0().x(), 1.0);
-        assert_eq!(Vec3::e0().y(), 0.0);
-        assert_eq!(Vec3::e0().z(), 0.0);
-
-        assert_eq!(Vec3::e1().x(), 0.0);
-        assert_eq!(Vec3::e1().y(), 1.0);
-        assert_eq!(Vec3::e1().z(), 0.0);
-
-        assert_eq!(Vec3::e2().x(), 0.0);
-        assert_eq!(Vec3::e2().y(), 0.0);
-        assert_eq!(Vec3::e2().z(), 1.0);
-    }
-
-    #[test]
-    fn new_vector() {
-        let v = Vec3::new(1.0, 2.0, 3.0);
-        assert_eq!(v.x(), 1.0);
-        assert_eq!(v.y(), 2.0);
-        assert_eq!(v.z(), 3.0);
-    }
-
-    #[test]
-    fn vector_quadrance() {
-        let v = Vec3::new(1.0, 2.0, 2.0);
-        assert_eq!(v.quadrance(), 9.0);
-    }
-
-    #[test]
-    fn vector_length() {
-        let v = Vec3::new(2.0, 3.0, 6.0);
-        assert_eq!(v.length(), 7.0);
-    }
-
-    #[test]
-    fn unit_vector() {
-        let v = Vec3::new(1.0, 2.0, 2.0).unit().unwrap();
-        assert_eq!(v.x(), 1.0 / 3.0);
-        assert_eq!(v.y(), 2.0 / 3.0);
-        assert_eq!(v.z(), 2.0 / 3.0);
-        let n = Vec3::new(0.0, 0.0, 0.0).unit();
-        assert_eq!(n, None);
-    }
-
-    #[test]
-    fn dot_product() {
-        let v1 = Vec3::new(0.0, 1.0, 2.0);
-        let v2 = Vec3::new(2.0, 1.0, 0.0);
-        assert_eq!(v1.dot(v2), 1.0);
-    }
-
-    #[test]
-    fn cross_product() {
-        assert_eq!(Vec3::e0().cross(Vec3::e1()), Vec3::e2());
-    }
-
-    #[test]
-    fn add_vectors() {
-        let v1 = Vec3::e0() + Vec3::e1() + Vec3::e2();
-        let v2 = Vec3::new(1.0, 1.0, 1.0);
-        assert_eq!(v1, v2);
-    }
-
-    #[test]
-    fn subtract_vectors() {
-        let v1 = -Vec3::e0() - Vec3::e1() - Vec3::e2();
-        let v2 = Vec3::new(-1.0, -1.0, -1.0);
-        assert_eq!(v1, v2);
-    }
-
-    #[test]
-    fn negate_vector() {
-        let v1 = Vec3::new(1.0, 1.0, 1.0);
-        let v2 = Vec3::new(-1.0, -1.0, -1.0);
-        assert_eq!(-v1, v2);
-    }
-
-    #[test]
-    fn scalar_multiplication() {
-        let v1 = Vec3::new(1.0, 1.0, 1.0);
-        let v2 = Vec3::new(3.0, 3.0, 3.0);
-        assert_eq!(v1 * 3.0, v2);
-        assert_eq!(3.0 * v1, v2);
-    }
-
-    #[test]
-    fn scalar_division() {
-        let v1 = Vec3::new(5.0, 5.0, 5.0);
-        let v2 = Vec3::new(2.5, 2.5, 2.5);
-        assert_eq!(v1 / 2.0, v2);
-    }
-
-    #[test]
-    fn vector_projection() {
-        let v1 = Vec3::e0() + Vec3::e1();
-        let v2 = 2.0 * Vec3::e0();
-        assert_eq!(v1.projection(v2), Vec3::e0());
-    }
-
-    #[test]
-    fn position_vector() {
-        let p = Point3::new(0.1, 0.2, 0.3);
-        let v: Vec3 = p.into();
-        assert_eq!(v.x(), 0.1);
-        assert_eq!(v.y(), 0.2);
-        assert_eq!(v.z(), 0.3);
-    }
-}
-
+/// 3D Cartesian point.
+///
+/// # Examples
+/// ```
+/// use geometry3d::{Point3, Vec3};
+/// let p1 = Point3::new(1.0, 2.0, 3.0);
+/// let p2 = Point3::default();
+/// let difference = Vec3::new(1.0, 2.0, 3.0);
+///
+/// assert_eq!(p1 - p2, difference);
+/// ```
 #[derive(Debug, PartialEq, Copy, Clone, Default)]
 pub struct Point3(NTuple<f64, 3>);
 
-/* Behaviours:
- * - create from x, y, z
- * - from position vector
- * - add vector
- * - sub vector
- * - difference of 2 ponits (A - B = vector from B to A)
- */
-
 impl Point3 {
+    /// Create a new `Point3` with cartesian coordinates (`x`, `y`, `z`).
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self(ntuple!(x, y, z))
     }
+
+    /// The x coordinate.
     pub fn x(self) -> f64 {
         self.0[0]
     }
 
+    /// The y coordinate.
     pub fn y(self) -> f64 {
         self.0[1]
     }
 
+    /// The z coordinate.
     pub fn z(self) -> f64 {
         self.0[2]
     }
 }
 
+/// Convert from position vector to point.
 impl std::convert::From<Vec3> for Point3 {
     fn from(vec: Vec3) -> Self {
         Point3(vec.0)
     }
 }
 
+/// Point from the starting point displaced by the vector.
 impl std::ops::Add<Vec3> for Point3 {
     type Output = Self;
 
@@ -301,6 +220,7 @@ impl std::ops::Add<Vec3> for Point3 {
     }
 }
 
+/// Point from the starting point displaced by the negative of the vector.
 impl std::ops::Sub<Vec3> for Point3 {
     type Output = Self;
 
@@ -309,56 +229,12 @@ impl std::ops::Sub<Vec3> for Point3 {
     }
 }
 
+/// The vector from the right-hand point to the left-hand point.
 impl std::ops::Sub<Point3> for Point3 {
     type Output = Vec3;
 
     fn sub(self, rhs: Self) -> Self::Output {
         Vec3(self.0.combine(rhs.0, |x, y| x - y))
-    }
-}
-
-#[cfg(test)]
-mod point3_tests {
-    use super::*;
-
-    #[test]
-    fn new_point() {
-        let p = Point3::new(22.0, 33.0, 44.0);
-        assert_eq!(p.x(), 22.0);
-        assert_eq!(p.y(), 33.0);
-        assert_eq!(p.z(), 44.0);
-    }
-
-    #[test]
-    fn from_vector() {
-        let v = Vec3::new(-5.0, -8.0, -13.0);
-        let p: Point3 = v.into();
-        assert_eq!(p.x(), -5.0);
-        assert_eq!(p.y(), -8.0);
-        assert_eq!(p.z(), -13.0);
-    }
-
-    #[test]
-    fn add_vector_to_point() {
-        let p1 = Point3::new(0.0, 0.0, 0.0);
-        let v = Vec3::new(0.1, 0.4, 0.9);
-        let p2 = p1 + v;
-        assert_eq!(p2, v.into());
-    }
-
-    #[test]
-    fn sub_vector_from_point() {
-        let p1 = Point3::new(0.0, 0.0, 0.0);
-        let v = Vec3::new(0.1, 0.4, 0.9);
-        let p2 = p1 - v;
-        assert_eq!(p2, (-v).into());
-    }
-
-    #[test]
-    fn difference_of_two_ponits() {
-        let p1 = Point3::new(0.0, 0.0, 0.0);
-        let p2 = Point3::new(4.0, 8.0, 16.0);
-        assert_eq!(p2 - p1, Vec3::from(p2));
     }
 }
 
@@ -369,43 +245,52 @@ pub struct Ray3 {
     pub time: f64,
 }
 
-/* Behaviours:
- * - Create ray at time
- * - Access ray origin, direction, and time
- * - Calculate point on ray at some multiple of direction
- */
-
 impl Ray3 {
     pub fn at(self, t: f64) -> Point3 {
         self.origin + t * self.direction
     }
 }
 
-#[cfg(test)]
-mod ray3_tests {
-    use super::*;
+#[derive(Debug, Copy, Clone)]
+pub struct AABB(pub Point3, pub Point3);
 
-    #[test]
-    fn create_and_access() {
-        let origin = Point3::new(0.0, 0.0, 0.0);
-        let direction = Vec3::e0();
-        let time = 0.0;
-        let ray = Ray3 { origin, direction, time };
-        assert_eq!(origin, ray.origin);
-        assert_eq!(direction, ray.direction);
-        assert_eq!(time, ray.time);
+impl AABB {
+    /// Calculates the per axis t-values for the ray passing through the planes
+    /// that intersect at the given point.
+    fn t(extent: Point3, ray: Ray3) -> NTuple<f64, 3> {
+        (extent - ray.origin).0.combine(ray.direction.0, |x, y| x / y)
     }
 
-    #[test]
-    fn at() {
-        let origin = Point3::new(0.0, 0.0, 0.0);
-        let direction = Vec3::e0();
-        let time = 0.0;
-        let ray = Ray3 { origin, direction, time };
+    /// Determine if a ray intersects with the axis-aligned bounding box for
+    /// t-values between `t_min` and `t_max`.
+    ///
+    /// Note that `t_min` must be strictly less than `t_max`.
+    pub fn hit(self, ray: Ray3, t_min: f64, t_max: f64) -> bool {
+        assert!(
+            t_min < t_max,
+            "t_min must be less than t_max for aabb hit calculation."
+        );
 
-        let p1 = origin + direction;
-        let p2 = origin + 2.0 * direction;
-        assert_eq!(ray.at(1.0), p1);
-        assert_eq!(ray.at(2.0), p2);
+        // Calculate t-values for the ray intersections with the planes 
+        // described by the extents.
+        // 
+        // 0 values in the direction vector still work as origins that lie 
+        // between the planes will produce + and - infinities which will be
+        // dropped when compared with t_max/t_min, but outside of/on the 
+        // boundary of will produce a situtaion where both the lower and upper
+        // values are + or - infinity which will always lead to t_min >= t_max.
+        let t0 = Self::t(self.0, ray);
+        let t1 = Self::t(self.1, ray);
+
+        // intersection t values sorted
+        let t_lower = t0.combine(t1, |x, y| x.min(y));
+        let t_upper = t0.combine(t1, |x, y| x.max(y));
+
+        // determine largest lower t-value, and smallest upper t-value
+        let t_min = t_lower.fold(t_min, |x, y| x.max(y));
+        let t_max = t_upper.fold(t_max, |x, y| x.min(y));
+
+        // if the ray passes through the volume of the AABB (not just the edge)
+        t_min < t_max
     }
 }
