@@ -252,13 +252,44 @@ impl Ray3 {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct AABB(pub Point3, pub Point3);
+pub struct AABB {
+    lo: Point3,
+    hi: Point3,
+}
 
 impl AABB {
+    fn pmin(a: Point3, b: Point3) -> Point3 {
+        Point3(a.0.combine(b.0, |x, y| x.min(y)))
+    }
+
+    fn pmax(a: Point3, b: Point3) -> Point3 {
+        Point3(a.0.combine(b.0, |x, y| x.max(y)))
+    }
+
+    pub fn new(a: Point3, b: Point3) -> AABB {
+        assert!(
+            a.0.combine(b.0, | x, y | x != y).reduce(|acc, x| acc && x),
+            "AABB extents must have a non-zero distance in all 3 dimensions."
+        );
+        let lo = Self::pmin(a, b);
+        let hi = Self::pmax(a, b);
+        AABB { lo, hi }
+    }
+
+    pub fn lo(self) -> Point3 {
+        self.lo
+    }
+
+    pub fn hi(self) -> Point3 {
+        self.hi
+    }
+
     /// Calculates the per axis t-values for the ray passing through the planes
     /// that intersect at the given point.
     fn t(extent: Point3, ray: Ray3) -> NTuple<f64, 3> {
-        (extent - ray.origin).0.combine(ray.direction.0, |x, y| x / y)
+        (extent - ray.origin)
+            .0
+            .combine(ray.direction.0, |x, y| x / y)
     }
 
     /// Determine if a ray intersects with the axis-aligned bounding box for
@@ -271,16 +302,16 @@ impl AABB {
             "t_min must be less than t_max for aabb hit calculation."
         );
 
-        // Calculate t-values for the ray intersections with the planes 
+        // Calculate t-values for the ray intersections with the planes
         // described by the extents.
-        // 
-        // 0 values in the direction vector still work as origins that lie 
+        //
+        // 0 values in the direction vector still work as origins that lie
         // between the planes will produce + and - infinities which will be
-        // dropped when compared with t_max/t_min, but outside of/on the 
+        // dropped when compared with t_max/t_min, but outside of/on the
         // boundary of will produce a situtaion where both the lower and upper
         // values are + or - infinity which will always lead to t_min >= t_max.
-        let t0 = Self::t(self.0, ray);
-        let t1 = Self::t(self.1, ray);
+        let t0 = Self::t(self.lo(), ray);
+        let t1 = Self::t(self.hi(), ray);
 
         // intersection t values sorted
         let t_lower = t0.combine(t1, |x, y| x.min(y));
@@ -292,5 +323,24 @@ impl AABB {
 
         // if the ray passes through the volume of the AABB (not just the edge)
         t_min < t_max
+    }
+
+    /// Takes two optioned AABBs and merges them. If both are Some then a true
+    /// merge is performed. If only one is Some then the Some is returned. If
+    /// both are None then None is returned.
+    pub fn merge(a: Option<AABB>, b: Option<AABB>) -> Option<AABB> {
+        if let Some(a) = a {
+            if let Some(b) = b {
+                let lo = Self::pmin(a.lo, b.lo);
+                let hi = Self::pmax(a.hi, b.hi);
+                Some(AABB { lo, hi })
+            } else {
+                Some(a)
+            }
+        } else if let Some(b) = b {
+            Some(b)
+        } else {
+            None
+        }
     }
 }

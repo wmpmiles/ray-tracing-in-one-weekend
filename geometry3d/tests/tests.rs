@@ -165,7 +165,11 @@ mod ray3_tests {
         let origin = Point3::new(0.0, 0.0, 0.0);
         let direction = Vec3::e0();
         let time = 0.0;
-        let ray = Ray3 { origin, direction, time };
+        let ray = Ray3 {
+            origin,
+            direction,
+            time,
+        };
         assert_eq!(origin, ray.origin);
         assert_eq!(direction, ray.direction);
         assert_eq!(time, ray.time);
@@ -176,7 +180,11 @@ mod ray3_tests {
         let origin = Point3::new(0.0, 0.0, 0.0);
         let direction = Vec3::e0();
         let time = 0.0;
-        let ray = Ray3 { origin, direction, time };
+        let ray = Ray3 {
+            origin,
+            direction,
+            time,
+        };
 
         let p1 = origin + direction;
         let p2 = origin + 2.0 * direction;
@@ -191,60 +199,85 @@ mod aabb_tests {
 
     #[test]
     fn create() {
-        let _aabb = AABB(Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 1.0, 1.0));
+        let aabb = AABB::new(Point3::new(1.0, 1.0, 1.0), Point3::new(0.0, 0.0, 0.0));
+        assert_eq!(aabb.lo(), Point3::new(0.0, 0.0, 0.0));
+        assert_eq!(aabb.hi(), Point3::new(1.0, 1.0, 1.0));
     }
 
     #[test]
     fn hit() {
-        let aabb = AABB(Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 1.0, 1.0));
+        let aabb = AABB::new(Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 1.0, 1.0));
+
         let mut r1 = Ray3 {
             origin: Point3::new(0.0, 0.0, 0.0),
             direction: Vec3::e0(),
-            time: 0.0
+            time: 0.0,
         };
-        assert_eq!(aabb.hit(r1,  0.0,  1.0), false);
-        assert_eq!(aabb.hit(r1,  0.1,  0.9), false);
-        assert_eq!(aabb.hit(r1,  1.0,  2.0), false);
-        assert_eq!(aabb.hit(r1, -1.0,  0.0), false);
-        assert_eq!(aabb.hit(r1, -1.0,  2.0), false);
+
+        assert_eq!(aabb.hit(r1, 0.0, 1.0), false);
+        assert_eq!(aabb.hit(r1, 0.1, 0.9), false);
+        assert_eq!(aabb.hit(r1, 1.0, 2.0), false);
+        assert_eq!(aabb.hit(r1, -1.0, 0.0), false);
+        assert_eq!(aabb.hit(r1, -1.0, 2.0), false);
         assert_eq!(aabb.hit(r1, -1.0, -0.5), false);
-        assert_eq!(aabb.hit(r1,  1.5,  2.0), false);
+        assert_eq!(aabb.hit(r1, 1.5, 2.0), false);
 
         r1.direction = -Vec3::e0();
-        assert_eq!(aabb.hit(r1,  0.0,  1.0), false);
-        assert_eq!(aabb.hit(r1,  0.1,  0.9), false);
-        assert_eq!(aabb.hit(r1,  1.0,  2.0), false);
-        assert_eq!(aabb.hit(r1, -1.0,  0.0), false);
-        assert_eq!(aabb.hit(r1, -2.0,  2.0), false);
+        assert_eq!(aabb.hit(r1, 0.0, 1.0), false);
+        assert_eq!(aabb.hit(r1, 0.1, 0.9), false);
+        assert_eq!(aabb.hit(r1, 1.0, 2.0), false);
+        assert_eq!(aabb.hit(r1, -1.0, 0.0), false);
+        assert_eq!(aabb.hit(r1, -2.0, 2.0), false);
         assert_eq!(aabb.hit(r1, -1.0, -0.5), false);
         assert_eq!(aabb.hit(r1, -2.0, -1.5), false);
 
         r1.direction = Vec3::new(1.0, 1.0, 1.0);
-        assert_eq!(aabb.hit(r1,  0.0,  1.0), true);
-        assert_eq!(aabb.hit(r1,  0.1,  0.9), true);
-        assert_eq!(aabb.hit(r1,  1.0,  2.0), false);
-        assert_eq!(aabb.hit(r1, -1.0,  0.0), false);
-        assert_eq!(aabb.hit(r1, -1.0,  2.0), true);
+        assert_eq!(aabb.hit(r1, 0.0, 1.0), true);
+        assert_eq!(aabb.hit(r1, 0.1, 0.9), true);
+        assert_eq!(aabb.hit(r1, 1.0, 2.0), false);
+        assert_eq!(aabb.hit(r1, -1.0, 0.0), false);
+        assert_eq!(aabb.hit(r1, -1.0, 2.0), true);
         assert_eq!(aabb.hit(r1, -1.0, -0.5), false);
-        assert_eq!(aabb.hit(r1,  1.5,  2.0), false);
+        assert_eq!(aabb.hit(r1, 1.5, 2.0), false);
 
         r1.direction = -r1.direction;
-        assert_eq!(aabb.hit(r1, -1.0,  0.0), true);
+        assert_eq!(aabb.hit(r1, -1.0, 0.0), true);
         assert_eq!(aabb.hit(r1, -0.9, -0.1), true);
         assert_eq!(aabb.hit(r1, -2.0, -1.0), false);
-        assert_eq!(aabb.hit(r1,  0.0,  1.0), false);
-        assert_eq!(aabb.hit(r1, -2.0,  1.0), true);
-        assert_eq!(aabb.hit(r1,  0.5,  1.0), false);
+        assert_eq!(aabb.hit(r1, 0.0, 1.0), false);
+        assert_eq!(aabb.hit(r1, -2.0, 1.0), true);
+        assert_eq!(aabb.hit(r1, 0.5, 1.0), false);
         assert_eq!(aabb.hit(r1, -2.0, -1.5), false);
 
         r1.direction = -r1.direction;
         r1.origin = Point3::new(1.0, 0.0, 0.0);
-        assert_eq!(aabb.hit(r1,  0.0,  1.0), false);
-        assert_eq!(aabb.hit(r1,  0.1,  0.9), false);
-        assert_eq!(aabb.hit(r1,  1.0,  2.0), false);
-        assert_eq!(aabb.hit(r1, -1.0,  0.0), false);
-        assert_eq!(aabb.hit(r1, -1.0,  2.0), false);
+        assert_eq!(aabb.hit(r1, 0.0, 1.0), false);
+        assert_eq!(aabb.hit(r1, 0.1, 0.9), false);
+        assert_eq!(aabb.hit(r1, 1.0, 2.0), false);
+        assert_eq!(aabb.hit(r1, -1.0, 0.0), false);
+        assert_eq!(aabb.hit(r1, -1.0, 2.0), false);
         assert_eq!(aabb.hit(r1, -1.0, -0.5), false);
-        assert_eq!(aabb.hit(r1,  1.5,  2.0), false);
+        assert_eq!(aabb.hit(r1, 1.5, 2.0), false);
+    }
+
+    #[test]
+    fn merge() {
+        let aabb1 = AABB::new(Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 1.0, 1.0));
+        let aabb2 = AABB::new(Point3::new(1.0, 1.0, 1.0), Point3::new(2.0, 2.0, 2.0));
+
+        let merged = AABB::merge(Some(aabb1), Some(aabb2)).unwrap();
+        assert_eq!(merged.lo(), Point3::new(0.0, 0.0, 0.0));
+        assert_eq!(merged.hi(), Point3::new(2.0, 2.0, 2.0));
+
+        let merged = AABB::merge(None, None);
+        assert_eq!(merged.is_none(), true);
+
+        let merged = AABB::merge(Some(aabb1), None).unwrap();
+        assert_eq!(merged.lo(), Point3::new(0.0, 0.0, 0.0));
+        assert_eq!(merged.hi(), Point3::new(1.0, 1.0, 1.0));
+
+        let merged = AABB::merge(None, Some(aabb2)).unwrap();
+        assert_eq!(merged.lo(), Point3::new(1.0, 1.0, 1.0));
+        assert_eq!(merged.hi(), Point3::new(2.0, 2.0, 2.0));
     }
 }

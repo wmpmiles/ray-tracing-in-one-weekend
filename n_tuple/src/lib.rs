@@ -133,8 +133,14 @@ mod tests {
     fn fold_tuples() {
         let t1 = ntuple!(1, 2, 3);
         assert_eq!(t1.reduce(|acc, x| acc + x), 6);
-        let t2 = NTuple::from([0; 0]);
-        assert_eq!(t2.reduce(|acc, x| acc + x), 0);
+        assert_eq!(t1.fold(10, |acc, x| acc + x), 16);
+    }
+
+    #[test]
+    #[should_panic]
+    fn reduce_zero_tuple() {
+        let zero = NTuple::from([0; 0]);
+        zero.reduce(|acc, x| acc + x);
     }
 }
 
