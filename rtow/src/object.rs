@@ -14,6 +14,13 @@ impl Object {
             Object::List(list) => list.hit(ray, t_min, t_max),
         }
     }
+
+    pub fn bounding_box(&self, time0: f64, time1: f64) -> Option<AABB> {
+        match self {
+            Object::Sphere(sphere) => sphere.bounding_box(time0, time1),
+            Object::List(list) => list.bounding_box(time0, time1),
+        }
+    }
 }
 
 pub struct Sphere {
@@ -31,8 +38,12 @@ impl Sphere {
         })
     }
 
+    fn center(&self, time: f64) -> Point3 {
+        self.location.at(time - self.location.time)
+    }
+
     fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
-        let center = self.location.at(ray.time - self.location.time);
+        let center = self.center(ray.time);
 
         let oc = ray.origin - center;
         let a = ray.direction.dot(ray.direction);
@@ -60,6 +71,18 @@ impl Sphere {
         let material = self.material;
 
         Some(HitRecord::new(point, outward_normal, ray, material, t))
+    }
+
+    fn bounding_box(&self, time0: f64, time1: f64) -> Option<AABB> {
+        let rvec = Vec3::new(self.radius, self.radius, self.radius);
+
+        let center0 = self.center(time0);
+        let center1 = self.center(time1);
+
+        let box0 = AABB::new(center0 - rvec, center0 + rvec);
+        let box1 = AABB::new(center1 - rvec, center1 + rvec);
+
+        AABB::merge(Some(box0), Some(box1))
     }
 }
 
@@ -93,5 +116,13 @@ impl List {
         }
 
         closest
+    }
+
+    fn bounding_box(&self, time0: f64, time1: f64) -> Option<AABB> {
+        let mut aabb = None;
+        for object in &self.objects {
+            aabb = AABB::merge(aabb, object.bounding_box(time0, time1));
+        }
+        aabb
     }
 }
