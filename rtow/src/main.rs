@@ -19,7 +19,7 @@ fn main() -> std::io::Result<()> {
     let mut image = Image::new(config.aspect_ratio, config.image_width);
 
     // World
-    let world = random_scene();
+    let mut world = random_scene();
 
     // Camera
     let lookfrom = Point3::new(13.0, 2.0, 3.0);
@@ -43,6 +43,9 @@ fn main() -> std::io::Result<()> {
         time_max,
     );
 
+    let opt_world = BVHNode::from_list(&mut world, time_min.unwrap(), time_max.unwrap());
+    let opt_world = Object::BVHNode(opt_world);
+
     // Sampler
     let sampler = SquareSampler::new(image.width, image.height, config.sampler_n);
 
@@ -52,7 +55,7 @@ fn main() -> std::io::Result<()> {
 
         for (u, v) in sampler.iter(x, y) {
             let ray = camera.get_ray(u, v);
-            pixel_color += ray_color(ray, &world, config.max_depth);
+            pixel_color += ray_color(ray, &opt_world, config.max_depth);
         }
 
         image.add_pixel(pixel_color.average().into());
@@ -84,7 +87,7 @@ fn ray_color(ray: Ray3, world: &Object, depth: u32) -> FloatRgb {
     }
 }
 
-fn random_scene() -> Object {
+fn random_scene() -> List {
     const SMALL_RADIUS: f64 = 0.2;
     const TIME: f64 = 0.0;
     let white = FloatRgb::new(1.0, 1.0, 1.0);
@@ -102,7 +105,7 @@ fn random_scene() -> Object {
     };
     let ground_radius = 1000.0;
     let ground_material = Lambertian::new(FloatRgb::new(0.5, 0.5, 0.5));
-    let ground = Sphere::new(ground_center, ground_radius, ground_material);
+    let ground = Object::Sphere(Sphere::new(ground_center, ground_radius, ground_material));
     world.add(ground);
 
     for a in -11..11 {
@@ -135,7 +138,7 @@ fn random_scene() -> Object {
                     Dielectric::new(1.5)
                 };
 
-                let sphere = Sphere::new(center, SMALL_RADIUS, material);
+                let sphere = Object::Sphere(Sphere::new(center, SMALL_RADIUS, material));
                 world.add(sphere);
             }
         }
@@ -163,13 +166,13 @@ fn random_scene() -> Object {
     let material2 = Lambertian::new(FloatRgb::new(0.4, 0.2, 0.1));
     let material3 = Metal::new(FloatRgb::new(0.7, 0.6, 0.5), 0.0);
 
-    let sphere1 = Sphere::new(center1, LARGE_RADIUS, material1);
-    let sphere2 = Sphere::new(center2, LARGE_RADIUS, material2);
-    let sphere3 = Sphere::new(center3, LARGE_RADIUS, material3);
+    let sphere1 = Object::Sphere(Sphere::new(center1, LARGE_RADIUS, material1));
+    let sphere2 = Object::Sphere(Sphere::new(center2, LARGE_RADIUS, material2));
+    let sphere3 = Object::Sphere(Sphere::new(center3, LARGE_RADIUS, material3));
 
     world.add(sphere1);
     world.add(sphere2);
     world.add(sphere3);
 
-    Object::List(world)
+    world
 }

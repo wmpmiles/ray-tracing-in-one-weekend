@@ -2,9 +2,11 @@ use crate::hit_record::HitRecord;
 use crate::material::Material;
 use geometry3d::*;
 
+#[derive(Clone)]
 pub enum Object {
     Sphere(Sphere),
     List(List),
+    BVHNode(BVHNode),
 }
 
 impl Object {
@@ -12,6 +14,7 @@ impl Object {
         match self {
             Object::Sphere(sphere) => sphere.hit(ray, t_min, t_max),
             Object::List(list) => list.hit(ray, t_min, t_max),
+            Object::BVHNode(node) => node.hit(ray, t_min, t_max),
         }
     }
 
@@ -19,10 +22,12 @@ impl Object {
         match self {
             Object::Sphere(sphere) => sphere.bounding_box(time0, time1),
             Object::List(list) => list.bounding_box(time0, time1),
+            Object::BVHNode(node) => node.bounding_box(time0, time1),
         }
     }
 }
 
+#[derive(Clone)]
 pub struct Sphere {
     location: Ray3,
     radius: f64,
@@ -30,12 +35,12 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn new(location: Ray3, radius: f64, material: Material) -> Object {
-        Object::Sphere(Self {
+    pub fn new(location: Ray3, radius: f64, material: Material) -> Sphere {
+        Sphere {
             location,
             radius,
             material,
-        })
+        }
     }
 
     fn center(&self, time: f64) -> Point3 {
@@ -86,13 +91,14 @@ impl Sphere {
     }
 }
 
+#[derive(Clone)]
 pub struct List {
     objects: Vec<Object>,
 }
 
 impl List {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> List {
+        List {
             objects: Vec::new(),
         }
     }
@@ -124,5 +130,89 @@ impl List {
             aabb = AABB::merge(aabb, object.bounding_box(time0, time1));
         }
         aabb
+    }
+}
+
+#[derive(Clone)]
+pub struct BVHNode {
+    aabb: AABB,
+    left: Box<Object>,
+    right: Box<Object>,
+}
+
+impl BVHNode {
+    /// Produces a Bounding Volume Hierarchy (BVH) from a `List` of `Object`.
+    pub fn from_list(olist: &mut List, time0: f64, time1: f64) -> BVHNode {
+        // preprocess list to remove all objects without AABBs
+        let mut objects = &mut olist.objects[..];
+        let mut i = 0;
+        for j in 0..objects.len() {
+            if objects[j].bounding_box(time0, time1).is_none() {
+                objects.swap(i, j);
+                i += 1;
+            }
+        }
+        objects = &mut objects[i..];
+
+        Self::from_vec(objects, time0, time1)
+    }
+
+    fn object_lo(obj: &Object, time0: f64, time1: f64) -> Point3 {
+        obj.bounding_box(time0, time1).unwrap().lo()
+    }
+
+    fn from_vec(objects: &mut [Object], time0: f64, time1: f64) -> BVHNode {
+        objects.sort_unstable_by(|a, b| {
+            let a = Self::object_lo(a, time0, time1).x();
+            let b = Self::object_lo(b, time0, time1).x();
+            a.partial_cmp(&b).unwrap()
+        });
+
+        let (left, right);
+        if objects.len() <= 2 {
+            left = objects[0].clone();
+            right = if objects.len() == 2 {
+                objects[1].clone()
+            } else {
+                left.clone()
+            };
+        } else {
+            let (lhs, rhs) = objects.split_at_mut(objects.len() / 2);
+            left = Object::BVHNode(Self::from_vec(lhs, time0, time1));
+            right = Object::BVHNode(Self::from_vec(rhs, time0, time1));
+        }
+
+        let left_aabb = left.bounding_box(time0, time1).unwrap();
+        let right_aabb = right.bounding_box(time0, time1).unwrap();
+        let aabb = AABB::merge(Some(left_aabb), Some(right_aabb)).unwrap();
+
+        let left = Box::new(left);
+        let right = Box::new(right);
+
+        BVHNode {
+            aabb,
+            left,
+            right,
+        }
+    }
+
+    pub fn bounding_box(&self, _time0: f64, _time1: f64) -> Option<AABB> {
+        Some(self.aabb)
+    }
+
+    pub fn hit(&self, ray_in: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        if !self.aabb.hit(ray_in, t_min, t_max) {
+            return None;
+        }
+
+        if let Some(hit_l) = self.left.hit(ray_in, t_min, t_max) {
+            if let Some(hit_r) = self.right.hit(ray_in, t_min, hit_l.t) {
+                Some(hit_r)
+            } else {
+                Some(hit_l)
+            }
+        } else {
+            self.right.hit(ray_in, t_min, t_max)
+        }
     }
 }
