@@ -44,7 +44,6 @@ fn main() -> std::io::Result<()> {
     );
 
     let opt_world = BVHNode::from_list(&mut world, time_min.unwrap(), time_max.unwrap());
-    let opt_world = Object::BVHNode(opt_world);
 
     // Sampler
     let sampler = SquareSampler::new(image.width, image.height, config.sampler_n);
@@ -67,7 +66,7 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn ray_color(ray: Ray3, world: &Object, depth: u32) -> FloatRgb {
+fn ray_color(ray: Ray3, world: &dyn Object, depth: u32) -> FloatRgb {
     let one = FloatRgb::new(1.0, 1.0, 1.0);
     let base = FloatRgb::new(0.5, 0.7, 1.0);
     let none = FloatRgb::new(0.0, 0.0, 0.0);
@@ -105,8 +104,8 @@ fn random_scene() -> List {
     };
     let ground_radius = 1000.0;
     let ground_material = Lambertian::new(FloatRgb::new(0.5, 0.5, 0.5));
-    let ground = Object::Sphere(Sphere::new(ground_center, ground_radius, ground_material));
-    world.add(ground);
+    let ground = Sphere::new(ground_center, ground_radius, ground_material);
+    world.add(Box::new(ground));
 
     for a in -11..11 {
         for b in -11..11 {
@@ -138,7 +137,7 @@ fn random_scene() -> List {
                     Dielectric::new(1.5)
                 };
 
-                let sphere = Object::Sphere(Sphere::new(center, SMALL_RADIUS, material));
+                let sphere = Box::new(Sphere::new(center, SMALL_RADIUS, material));
                 world.add(sphere);
             }
         }
@@ -166,9 +165,9 @@ fn random_scene() -> List {
     let material2 = Lambertian::new(FloatRgb::new(0.4, 0.2, 0.1));
     let material3 = Metal::new(FloatRgb::new(0.7, 0.6, 0.5), 0.0);
 
-    let sphere1 = Object::Sphere(Sphere::new(center1, LARGE_RADIUS, material1));
-    let sphere2 = Object::Sphere(Sphere::new(center2, LARGE_RADIUS, material2));
-    let sphere3 = Object::Sphere(Sphere::new(center3, LARGE_RADIUS, material3));
+    let sphere1 = Box::new(Sphere::new(center1, LARGE_RADIUS, material1));
+    let sphere2 = Box::new(Sphere::new(center2, LARGE_RADIUS, material2));
+    let sphere3 = Box::new(Sphere::new(center3, LARGE_RADIUS, material3));
 
     world.add(sphere1);
     world.add(sphere2);
