@@ -138,6 +138,12 @@ impl Object for List {
     }
 }
 
+impl Default for List {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone)]
 pub struct BVHNode {
     aabb: AABB,
@@ -177,8 +183,8 @@ impl BVHNode {
         f: impl Fn(&Box<dyn Object>) -> f64,
     ) -> impl Fn(&Box<dyn Object>, &Box<dyn Object>) -> Ordering {
         move |a, b| {
-            let a = f(&a);
-            let b = f(&b);
+            let a = f(a);
+            let b = f(b);
             a.partial_cmp(&b).unwrap()
         }
     }
@@ -203,7 +209,7 @@ impl BVHNode {
         let lo = Rc::new(Self::object_lo(t0, t1));
         let x = Self::axis(lo.clone(), |p3| p3.x());
         let y = Self::axis(lo.clone(), |p3| p3.y());
-        let z = Self::axis(lo.clone(), |p3| p3.z());
+        let z = Self::axis(lo, |p3| p3.z());
 
         let (left, right);
         if objects.len() <= 2 {

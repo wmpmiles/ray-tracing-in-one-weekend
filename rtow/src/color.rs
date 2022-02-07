@@ -99,3 +99,9 @@ impl std::ops::AddAssign<FloatRgb> for FRgbAccumulator {
         self.count += 1;
     }
 }
+
+impl Default for FRgbAccumulator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
