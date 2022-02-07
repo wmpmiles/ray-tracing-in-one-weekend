@@ -337,10 +337,8 @@ impl AABB {
             } else {
                 Some(a)
             }
-        } else if let Some(b) = b {
-            Some(b)
         } else {
-            None
+            b
         }
     }
 

@@ -28,15 +28,15 @@ impl Clone for Box<dyn Object> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Sphere {
     location: Ray3,
     radius: f64,
-    material: Material,
+    material: Box<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(location: Ray3, radius: f64, material: Material) -> Sphere {
+    pub fn new(location: Ray3, radius: f64, material: Box<dyn Material>) -> Sphere {
         Sphere {
             location,
             radius,
@@ -76,7 +76,7 @@ impl Object for Sphere {
         let t = root;
         let point = ray.at(t);
         let outward_normal = (point - center) / self.radius;
-        let material = self.material;
+        let material = self.material.clone();
 
         Some(HitRecord::new(point, outward_normal, ray, material, t))
     }

@@ -103,7 +103,7 @@ fn random_scene() -> List {
         time: TIME,
     };
     let ground_radius = 1000.0;
-    let ground_material = Lambertian::new(FloatRgb::new(0.5, 0.5, 0.5));
+    let ground_material = Box::new(Lambertian::new(FloatRgb::new(0.5, 0.5, 0.5)));
     let ground = Sphere::new(ground_center, ground_radius, ground_material);
     world.add(Box::new(ground));
 
@@ -125,16 +125,16 @@ fn random_scene() -> List {
             };
 
             if (center_point - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
-                let material = if choose_mat < 0.8 {
+                let material: Box<dyn Material> = if choose_mat < 0.8 {
                     center.direction = perturbed;
                     let albedo = rng.color() * rng.color();
-                    Lambertian::new(albedo)
+                    Box::new(Lambertian::new(albedo))
                 } else if choose_mat < 0.95 {
                     let albedo = rng.color().mix(white, 0.5);
                     let fuzz = rng.random::<f64>() / 2.0;
-                    Metal::new(albedo, fuzz)
+                    Box::new(Metal::new(albedo, fuzz))
                 } else {
-                    Dielectric::new(1.5)
+                    Box::new(Dielectric::new(1.5))
                 };
 
                 let sphere = Box::new(Sphere::new(center, SMALL_RADIUS, material));
@@ -161,9 +161,9 @@ fn random_scene() -> List {
 
     const LARGE_RADIUS: f64 = 1.0;
 
-    let material1 = Dielectric::new(1.5);
-    let material2 = Lambertian::new(FloatRgb::new(0.4, 0.2, 0.1));
-    let material3 = Metal::new(FloatRgb::new(0.7, 0.6, 0.5), 0.0);
+    let material1 = Box::new(Dielectric::new(1.5));
+    let material2 = Box::new(Lambertian::new(FloatRgb::new(0.4, 0.2, 0.1)));
+    let material3 = Box::new(Metal::new(FloatRgb::new(0.7, 0.6, 0.5), 0.0));
 
     let sphere1 = Box::new(Sphere::new(center1, LARGE_RADIUS, material1));
     let sphere2 = Box::new(Sphere::new(center2, LARGE_RADIUS, material2));
