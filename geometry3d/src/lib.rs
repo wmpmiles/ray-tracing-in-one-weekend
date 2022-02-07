@@ -343,4 +343,8 @@ impl AABB {
             None
         }
     }
+
+    pub fn volume(self) -> f64 {
+        (self.hi - self.lo).0.reduce(|acc, x| acc * x).abs()
+    }
 }

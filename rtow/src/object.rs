@@ -1,9 +1,10 @@
 use crate::hit_record::HitRecord;
 use crate::material::Material;
 use geometry3d::*;
+use std::cmp::Ordering;
+use std::rc::Rc;
 
-pub trait Object: CloneObject
-{
+pub trait Object: CloneObject {
     fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord>;
     fn bounding_box(&self, t_min: f64, t_max: f64) -> Option<AABB>;
 }
@@ -161,16 +162,48 @@ impl BVHNode {
         Self::from_vec(objects, time0, time1)
     }
 
-    fn object_lo(obj: &Box<dyn Object>, time0: f64, time1: f64) -> Point3 {
-        obj.bounding_box(time0, time1).unwrap().lo()
+    fn object_lo(t0: f64, t1: f64) -> impl Fn(&Box<dyn Object>) -> Point3 {
+        move |obj| obj.bounding_box(t0, t1).unwrap().lo()
     }
 
-    fn from_vec(objects: &mut [Box<dyn Object>], time0: f64, time1: f64) -> BVHNode {
-        objects.sort_unstable_by(|a, b| {
-            let a = Self::object_lo(&a, time0, time1).x();
-            let b = Self::object_lo(&b, time0, time1).x();
+    fn axis(
+        f: Rc<impl Fn(&Box<dyn Object>) -> Point3 + 'static>,
+        g: impl Fn(Point3) -> f64 + 'static,
+    ) -> impl Fn(&Box<dyn Object>) -> f64 {
+        move |obj| g(f(obj))
+    }
+
+    fn cmp(
+        f: impl Fn(&Box<dyn Object>) -> f64,
+    ) -> impl Fn(&Box<dyn Object>, &Box<dyn Object>) -> Ordering {
+        move |a, b| {
+            let a = f(&a);
+            let b = f(&b);
             a.partial_cmp(&b).unwrap()
-        });
+        }
+    }
+
+    fn lr(
+        objects: &mut [Box<dyn Object>],
+        f: impl Fn(&Box<dyn Object>) -> f64,
+        t0: f64,
+        t1: f64,
+    ) -> (Box<BVHNode>, Box<BVHNode>, f64) {
+        objects.sort_unstable_by(Self::cmp(f));
+        let (lhs, rhs) = objects.split_at_mut(objects.len() / 2);
+        let left = Box::new(Self::from_vec(lhs, t0, t1));
+        let right = Box::new(Self::from_vec(rhs, t0, t1));
+        let vl = left.bounding_box(t0, t1).unwrap().volume();
+        let vr = right.bounding_box(t0, t1).unwrap().volume();
+        let ratio = vl.max(vr) / vl.min(vr);
+        (left, right, ratio)
+    }
+
+    fn from_vec(objects: &mut [Box<dyn Object>], t0: f64, t1: f64) -> BVHNode {
+        let lo = Rc::new(Self::object_lo(t0, t1));
+        let x = Self::axis(lo.clone(), |p3| p3.x());
+        let y = Self::axis(lo.clone(), |p3| p3.y());
+        let z = Self::axis(lo.clone(), |p3| p3.z());
 
         let (left, right);
         if objects.len() <= 2 {
@@ -181,20 +214,27 @@ impl BVHNode {
                 left.clone()
             };
         } else {
-            let (lhs, rhs) = objects.split_at_mut(objects.len() / 2);
-            left = Box::new(Self::from_vec(lhs, time0, time1));
-            right = Box::new(Self::from_vec(rhs, time0, time1));
+            let (xl, xr, xratio) = Self::lr(objects, x, t0, t1);
+            let (yl, yr, yratio) = Self::lr(objects, y, t0, t1);
+            let (zl, zr, zratio) = Self::lr(objects, z, t0, t1);
+            let smallest = xratio.min(yratio.min(zratio));
+            if xratio == smallest {
+                left = xl;
+                right = xr;
+            } else if yratio == smallest {
+                left = yl;
+                right = yr;
+            } else {
+                left = zl;
+                right = zr;
+            }
         }
 
-        let left_aabb = left.bounding_box(time0, time1).unwrap();
-        let right_aabb = right.bounding_box(time0, time1).unwrap();
+        let left_aabb = left.bounding_box(t0, t1).unwrap();
+        let right_aabb = right.bounding_box(t0, t1).unwrap();
         let aabb = AABB::merge(Some(left_aabb), Some(right_aabb)).unwrap();
 
-        BVHNode {
-            aabb,
-            left,
-            right,
-        }
+        BVHNode { aabb, left, right }
     }
 }
 
