@@ -76,7 +76,7 @@ impl Object for Sphere {
         let t = root;
         let point = ray.at(t);
         let outward_normal = (point - center) / self.radius;
-        let material = self.material.clone();
+        let material = &*self.material;
 
         Some(HitRecord::new(point, outward_normal, ray, material, t))
     }

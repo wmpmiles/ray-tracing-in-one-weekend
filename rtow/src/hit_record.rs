@@ -1,20 +1,20 @@
 use crate::material::*;
 use geometry3d::*;
 
-pub struct HitRecord {
+pub struct HitRecord<'a> {
     pub point: Point3,
     pub normal: Vec3,
-    pub material: Box<dyn Material>,
+    pub material: &'a dyn Material,
     pub t: f64,
     pub front_face: bool,
 }
 
-impl HitRecord {
+impl<'a> HitRecord<'a> {
     pub fn new(
         point: Point3,
         outward_normal: Vec3,
         ray_in: Ray3,
-        material: Box<dyn Material>,
+        material: &'a dyn Material,
         t: f64,
     ) -> HitRecord {
         let front_face = ray_in.direction.dot(outward_normal) < 0.0;
