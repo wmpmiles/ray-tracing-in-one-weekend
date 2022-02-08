@@ -47,6 +47,21 @@ impl Sphere {
     pub fn center(&self, time: f64) -> Point3 {
         self.location.at(time - self.location.time)
     }
+
+    /// Given a point (p) on a sphere of radius one, centered at the origin,
+    /// calculates a uv mapping on the surface of the sphere such that u and v
+    /// lie in [0, 1].
+    pub fn uv(p: Point3) -> (f64, f64) {
+        let pi = std::f64::consts::PI;
+
+        let theta = (-p.y()).acos();
+        let phi = (-p.z()).atan2(p.x()) + pi;
+
+        let u = phi / (2.0 * pi);
+        let v = theta / pi;
+
+        (u, v)
+    }
 }
 
 impl Object for Sphere {
@@ -76,9 +91,10 @@ impl Object for Sphere {
         let t = root;
         let point = ray.at(t);
         let outward_normal = (point - center) / self.radius;
+        let (u, v) = Sphere::uv(outward_normal.into());
         let material = &*self.material;
 
-        Some(HitRecord::new(point, outward_normal, ray, material, t))
+        Some(HitRecord::new(point, outward_normal, ray, material, t, u, v))
     }
 
     fn bounding_box(&self, time0: f64, time1: f64) -> Option<AABB> {

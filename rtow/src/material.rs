@@ -1,6 +1,7 @@
 use crate::hit_record::HitRecord;
 use crate::color::FloatRgb;
 use crate::random::Random;
+use crate::texture::*;
 use geometry3d::*;
 
 pub trait Material: CloneMaterial {
@@ -26,13 +27,13 @@ impl Clone for Box<dyn Material> {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Lambertian {
-    albedo: FloatRgb,
+    albedo: Box<dyn Texture>,
 }
 
 impl Lambertian {
-    pub fn new(albedo: FloatRgb) -> Lambertian {
+    pub fn new(albedo: Box<dyn Texture>) -> Lambertian {
         Lambertian { albedo }
     }
 }
@@ -57,7 +58,9 @@ impl Material for Lambertian {
         let origin = rec.point;
         let time = ray_in.time;
 
-        Some((self.albedo, Ray3 { origin, direction, time }))
+        let attenuation = self.albedo.value(rec);
+
+        Some((attenuation, Ray3 { origin, direction, time }))
     }
 }
 

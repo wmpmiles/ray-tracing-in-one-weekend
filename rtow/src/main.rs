@@ -9,6 +9,7 @@ use rtow::material::*;
 use rtow::object::*;
 use rtow::random::Random;
 use rtow::sampler::SquareSampler;
+use rtow::texture::*;
 use std::env;
 
 fn main() -> std::io::Result<()> {
@@ -103,7 +104,11 @@ fn random_scene() -> List {
         time: TIME,
     };
     let ground_radius = 1000.0;
-    let ground_material = Box::new(Lambertian::new(FloatRgb::new(0.5, 0.5, 0.5)));
+    let ground_texture = CheckerTexture::new(
+        FloatRgb::new(0.2, 0.3, 0.1).into(),
+        FloatRgb::new(0.9, 0.9, 0.9).into(),
+    );
+    let ground_material = Box::new(Lambertian::new(Box::new(ground_texture)));
     let ground = Sphere::new(ground_center, ground_radius, ground_material);
     world.add(Box::new(ground));
 
@@ -128,7 +133,7 @@ fn random_scene() -> List {
                 let material: Box<dyn Material> = if choose_mat < 0.8 {
                     center.direction = perturbed;
                     let albedo = rng.color() * rng.color();
-                    Box::new(Lambertian::new(albedo))
+                    Box::new(Lambertian::new(albedo.into()))
                 } else if choose_mat < 0.95 {
                     let albedo = rng.color().mix(white, 0.5);
                     let fuzz = rng.random::<f64>() / 2.0;
@@ -162,7 +167,7 @@ fn random_scene() -> List {
     const LARGE_RADIUS: f64 = 1.0;
 
     let material1 = Box::new(Dielectric::new(1.5));
-    let material2 = Box::new(Lambertian::new(FloatRgb::new(0.4, 0.2, 0.1)));
+    let material2 = Box::new(Lambertian::new(FloatRgb::new(0.4, 0.2, 0.1).into()));
     let material3 = Box::new(Metal::new(FloatRgb::new(0.7, 0.6, 0.5), 0.0));
 
     let sphere1 = Box::new(Sphere::new(center1, LARGE_RADIUS, material1));
