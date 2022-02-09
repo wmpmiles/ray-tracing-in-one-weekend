@@ -1,8 +1,15 @@
-pub trait TupleMember: Copy + Clone + PartialEq + Default {}
-impl<T: Copy + Clone + PartialEq + Default> TupleMember for T {}
+use serde::{Serialize, Deserialize};
+use serde::de::DeserializeOwned;
+use serde_big_array::BigArray;
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct NTuple<T, const N: usize>([T; N])
+pub trait TupleMember: Copy + Clone + PartialEq + Default + Serialize + DeserializeOwned {}
+impl<T: Copy + Clone + PartialEq + Default + Serialize + DeserializeOwned> TupleMember for T {}
+
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NTuple<T, const N: usize>(
+    #[serde(with = "BigArray")]
+    [T; N]
+)
 where
     T: TupleMember;
 
@@ -144,6 +151,14 @@ mod tests {
     fn reduce_zero_tuple() {
         let zero = NTuple::from([0; 0]);
         zero.reduce(|acc, x| acc + x);
+    }
+
+    #[test]
+    fn de_serialize() {
+        let t = ntuple!(1, 2, 3);
+        let s = serde_json::to_string(&t).unwrap();
+        let t_de: NTuple<i32, 3> = serde_json::from_str(&s).unwrap();
+        assert_eq!(t_de, t);
     }
 }
 
