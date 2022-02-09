@@ -1,7 +1,10 @@
+pub trait TupleMember: Copy + Clone + PartialEq + Default {}
+impl<T: Copy + Clone + PartialEq + Default> TupleMember for T {}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct NTuple<T, const N: usize>([T; N])
 where
-    T: Copy + Clone + PartialEq + Default;
+    T: TupleMember;
 
 /* Behaviours:
  * - create n-tuple with list of values
@@ -17,12 +20,12 @@ macro_rules! ntuple {
 
 impl<T, const N: usize> NTuple<T, N> 
 where
-    T: Copy + Clone + PartialEq + Default,
+    T: TupleMember,
 {
     pub fn map<F, U>(self, f: F) -> NTuple<U, N>
     where
         F: Fn(T) -> U,
-        U: Copy + Clone + PartialEq + Default,
+        U: TupleMember,
     {
         NTuple(self.0.map(f))
     }
@@ -30,7 +33,7 @@ where
     pub fn combine<F, U>(self, rhs: Self, f: F) -> NTuple<U, N>
     where
         F: Fn(T, T) -> U,
-        U: Copy + Clone + PartialEq + Default,
+        U: TupleMember,
     {
         let mut result: NTuple<U, N> = NTuple::default();
         for i in 0..N {
@@ -65,7 +68,7 @@ where
 
 impl<T, const N: usize> Default for NTuple<T, N>
 where
-    T: Copy + Clone + PartialEq + Default,
+    T: TupleMember,
 {
     fn default() -> Self {
         NTuple([T::default(); N])
@@ -74,7 +77,7 @@ where
 
 impl<T, const N: usize> std::ops::Index<usize> for NTuple<T, N>
 where
-    T: Copy + Clone + PartialEq + Default,
+    T: TupleMember,
 {
     type Output = T;
 
@@ -85,7 +88,7 @@ where
 
 impl<T, const N: usize> std::convert::From<[T; N]> for NTuple<T, N>
 where
-    T: Copy + Clone + PartialEq + Default,
+    T: TupleMember,
 {
     fn from(array: [T; N]) -> Self {
         NTuple(array)
