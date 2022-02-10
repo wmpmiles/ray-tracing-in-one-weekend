@@ -1,6 +1,7 @@
 use crate::random::Random;
-use geometry3d::*;
+use crate::image::Image;
 use crate::config::*;
+use geometry3d::*;
 
 pub struct Camera {
     origin: Point3,
@@ -15,11 +16,11 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(config: CameraConfig) -> Camera {
+    pub fn new(config: CameraConfig, image: &Image) -> Camera {
         let theta = config.vertical_fov.to_radians();
         let h = f64::tan(theta / 2.0);
         let viewport_height = 2.0 * h;
-        let viewport_width = config.aspect_ratio * viewport_height;
+        let viewport_width = image.aspect_ratio * viewport_height;
 
         let w = match (config.look_from - config.look_at).unit() {
             Some(vec) => vec,
