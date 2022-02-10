@@ -1,8 +1,12 @@
+use crate::config::SamplerConfig;
+use crate::image::Image;
+
 pub struct SquareSampler {
     width: u32,
     height: u32,
     n: u32,
     n2: u32,
+    pub max_depth: u32,
 }
 
 pub struct SquareSamplerIter<'a> {
@@ -13,12 +17,13 @@ pub struct SquareSamplerIter<'a> {
 }
 
 impl SquareSampler {
-    pub fn new(width: u32, height: u32, n: u32) -> Self {
+    pub fn new(config: SamplerConfig, image: &Image) -> Self {
         Self {
-            width,
-            height,
-            n,
-            n2: n * n,
+            width: image.width,
+            height: image.height,
+            n: config.n,
+            n2: config.n * config.n,
+            max_depth: config.max_depth,
         }
     }
     

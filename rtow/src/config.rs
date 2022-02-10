@@ -1,46 +1,29 @@
-use std::str::FromStr;
+use serde::{Serialize, Deserialize};
+use geometry3d::*;
 
-pub struct Config {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageConfig {
     pub filename: String,
-    pub image_width: u32,
-    pub image_height: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct CameraConfig {
+    pub look_from: Point3,
+    pub look_at: Point3,
+    pub up: Vec3,
+    pub vertical_fov: f64,
     pub aspect_ratio: f64,
-    pub sampler_n: u32,
+    pub aperture: f64,
+    pub focus_distance: f64,
+    pub time_min: f64,
+    pub time_max: f64,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct SamplerConfig {
+    pub n: u32,
     pub max_depth: u32,
 }
 
-impl Config {
-    fn arg_to_u32(args: &mut impl Iterator<Item = String>) -> u32 {
-        u32::from_str(&args.next().unwrap()).unwrap()
-    }
-
-    pub fn parse(mut args: impl Iterator<Item = String>) -> Self {
-        let mut filename = String::from(r"render.png");
-        let mut image_width = 400;
-        let mut image_height = 300;
-        let mut sampler_n = 3;
-        let mut max_depth = 50;
-
-        while let Some(arg) = args.next() {
-            match &arg[..] {
-                "-f" => filename = args.next().unwrap(),
-                "-w" => image_width = Self::arg_to_u32(&mut args),
-                "-h" => image_height = Self::arg_to_u32(&mut args),
-                "-n" => sampler_n = Self::arg_to_u32(&mut args),
-                "-d" => max_depth = Self::arg_to_u32(&mut args),
-                _ => (),
-            }
-        }
-
-        let aspect_ratio = image_width as f64 / image_height as f64;
-
-        Config {
-            filename,
-            image_width,
-            image_height,
-            aspect_ratio,
-            sampler_n,
-            max_depth,
-        }
-    }
-}

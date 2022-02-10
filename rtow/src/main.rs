@@ -1,53 +1,51 @@
 use geometry3d::*;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
-use rtow::camera::Camera;
+use rtow::camera::*;
 use rtow::color::*;
-use rtow::config::Config;
+use rtow::config::*;
 use rtow::image::Image;
 use rtow::material::*;
 use rtow::object::*;
 use rtow::random::Random;
 use rtow::sampler::SquareSampler;
 use rtow::texture::*;
-use std::env;
 
 fn main() -> std::io::Result<()> {
-    // Args
-    let config = Config::parse(env::args());
-
     // Image
-    let mut image = Image::new(config.aspect_ratio, config.image_width);
+    let image_config = ImageConfig {
+        filename: String::from("render.png"),
+        width: 400,
+        height: 300,
+    };
+    let mut image = Image::new(image_config);
 
     // World
     let mut world = random_scene();
 
     // Camera
-    let lookfrom = Point3::new(13.0, 2.0, 3.0);
-    let lookat = Point3::new(0.0, 0.0, 0.0);
-    let vup = Vec3::new(0.0, 1.0, 0.0);
-    let vfov = 20.0;
-    let dist_to_focus = 10.0;
-    let aperture = 0.1;
-    let time_min = Some(0.0);
-    let time_max = Some(1.0);
+    let camera_config = CameraConfig {
+        look_from: Point3::new(13.0, 2.0, 3.0),
+        look_at: Point3::new(0.0, 0.0, 0.0),
+        up: Vec3::new(0.0, 1.0, 0.0),
+        vertical_fov: 20.0,
+        focus_distance: 10.0,
+        aspect_ratio: image.aspect_ratio,
+        aperture: 0.1,
+        time_min: 0.0,
+        time_max: 1.0,
+    };
 
-    let camera = Camera::new(
-        lookfrom,
-        lookat,
-        vup,
-        vfov,
-        image.aspect_ratio,
-        aperture,
-        dist_to_focus,
-        time_min,
-        time_max,
-    );
+    let camera = Camera::new(camera_config);
 
-    let opt_world = BVHNode::from_list(&mut world, time_min.unwrap(), time_max.unwrap());
+    let opt_world = Object::BVHNode(BVHNode::from_list(&mut world, camera.time_min, camera.time_max));
 
     // Sampler
-    let sampler = SquareSampler::new(image.width, image.height, config.sampler_n);
+    let sampler_config = SamplerConfig {
+        n: 3,
+        max_depth: 50,
+    };
+    let sampler = SquareSampler::new(sampler_config, &image);
 
     // using bottom left as (0,0)
     for (x, y) in image.iter() {
@@ -55,19 +53,19 @@ fn main() -> std::io::Result<()> {
 
         for (u, v) in sampler.iter(x, y) {
             let ray = camera.get_ray(u, v);
-            pixel_color += ray_color(ray, &opt_world, config.max_depth);
+            pixel_color += ray_color(ray, &opt_world, sampler.max_depth);
         }
 
         image.add_pixel(pixel_color.average().into());
     }
 
-    image.write(&config.filename)?;
+    image.write()?;
     eprint!("\nDone.\n");
 
     Ok(())
 }
 
-fn ray_color(ray: Ray3, world: &dyn Object, depth: u32) -> FloatRgb {
+fn ray_color(ray: Ray3, world: &Object, depth: u32) -> FloatRgb {
     let one = FloatRgb::new(1.0, 1.0, 1.0);
     let base = FloatRgb::new(0.5, 0.7, 1.0);
     let none = FloatRgb::new(0.0, 0.0, 0.0);
@@ -104,13 +102,13 @@ fn random_scene() -> List {
         time: TIME,
     };
     let ground_radius = 1000.0;
-    let ground_texture = CheckerTexture::new(
+    let ground_texture = Texture::CheckerTexture(CheckerTexture::new(
         FloatRgb::new(0.2, 0.3, 0.1).into(),
         FloatRgb::new(0.9, 0.9, 0.9).into(),
-    );
-    let ground_material = Box::new(Lambertian::new(Box::new(ground_texture)));
-    let ground = Sphere::new(ground_center, ground_radius, ground_material);
-    world.add(Box::new(ground));
+    ));
+    let ground_material = Material::Lambertian(Lambertian::new(ground_texture));
+    let ground = Object::Sphere(Sphere::new(ground_center, ground_radius, ground_material));
+    world.add(ground);
 
     for a in -11..11 {
         for b in -11..11 {
@@ -130,19 +128,19 @@ fn random_scene() -> List {
             };
 
             if (center_point - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
-                let material: Box<dyn Material> = if choose_mat < 0.8 {
+                let material: Material = if choose_mat < 0.8 {
                     center.direction = perturbed;
                     let albedo = rng.color() * rng.color();
-                    Box::new(Lambertian::new(albedo.into()))
+                    Material::Lambertian(Lambertian::new(albedo.into()))
                 } else if choose_mat < 0.95 {
                     let albedo = rng.color().mix(white, 0.5);
                     let fuzz = rng.random::<f64>() / 2.0;
-                    Box::new(Metal::new(albedo, fuzz))
+                    Material::Metal(Metal::new(albedo, fuzz))
                 } else {
-                    Box::new(Dielectric::new(1.5))
+                    Material::Dielectric(Dielectric::new(1.5))
                 };
 
-                let sphere = Box::new(Sphere::new(center, SMALL_RADIUS, material));
+                let sphere = Object::Sphere(Sphere::new(center, SMALL_RADIUS, material));
                 world.add(sphere);
             }
         }
@@ -166,13 +164,13 @@ fn random_scene() -> List {
 
     const LARGE_RADIUS: f64 = 1.0;
 
-    let material1 = Box::new(Dielectric::new(1.5));
-    let material2 = Box::new(Lambertian::new(FloatRgb::new(0.4, 0.2, 0.1).into()));
-    let material3 = Box::new(Metal::new(FloatRgb::new(0.7, 0.6, 0.5), 0.0));
+    let material1 = Material::Dielectric(Dielectric::new(1.5));
+    let material2 = Material::Lambertian(Lambertian::new(FloatRgb::new(0.4, 0.2, 0.1).into()));
+    let material3 = Material::Metal(Metal::new(FloatRgb::new(0.7, 0.6, 0.5), 0.0));
 
-    let sphere1 = Box::new(Sphere::new(center1, LARGE_RADIUS, material1));
-    let sphere2 = Box::new(Sphere::new(center2, LARGE_RADIUS, material2));
-    let sphere3 = Box::new(Sphere::new(center3, LARGE_RADIUS, material3));
+    let sphere1 = Object::Sphere(Sphere::new(center1, LARGE_RADIUS, material1));
+    let sphere2 = Object::Sphere(Sphere::new(center2, LARGE_RADIUS, material2));
+    let sphere3 = Object::Sphere(Sphere::new(center3, LARGE_RADIUS, material3));
 
     world.add(sphere1);
     world.add(sphere2);

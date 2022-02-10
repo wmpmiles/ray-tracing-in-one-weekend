@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 rand = "0.8.0"
 png = "0.17.2"
+serde = { version = "1.0", features = ["derive"] }
 geometry3d = { path = "../geometry3d" }
 n_tuple = { path = "../n_tuple" }
 

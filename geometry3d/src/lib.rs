@@ -11,6 +11,7 @@
 //! display numeric instability in some cases.
 
 use n_tuple::*;
+use serde::{Serialize, Deserialize};
 
 /// 3D Euclidean vector.
 ///
@@ -26,7 +27,7 @@ use n_tuple::*;
 ///
 /// `e0()` through `e2()` are the standard basis vectors.
 ///
-#[derive(Debug, PartialEq, Copy, Clone, Default)]
+#[derive(Debug, PartialEq, Copy, Clone, Default, Serialize, Deserialize)]
 pub struct Vec3(NTuple<f64, 3>);
 
 impl Vec3 {
@@ -179,7 +180,7 @@ impl std::convert::From<Point3> for Vec3 {
 ///
 /// assert_eq!(p1 - p2, difference);
 /// ```
-#[derive(Debug, PartialEq, Copy, Clone, Default)]
+#[derive(Debug, PartialEq, Copy, Clone, Default, Serialize, Deserialize)]
 pub struct Point3(NTuple<f64, 3>);
 
 impl Point3 {
@@ -238,7 +239,7 @@ impl std::ops::Sub<Point3> for Point3 {
     }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone, Default)]
+#[derive(Debug, PartialEq, Copy, Clone, Default, Serialize, Deserialize)]
 pub struct Ray3 {
     pub origin: Point3,
     pub direction: Vec3,
@@ -251,7 +252,7 @@ impl Ray3 {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct AABB {
     lo: Point3,
     hi: Point3,

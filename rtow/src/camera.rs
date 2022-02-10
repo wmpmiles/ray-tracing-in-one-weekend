@@ -1,5 +1,6 @@
-use geometry3d::*;
 use crate::random::Random;
+use geometry3d::*;
+use crate::config::*;
 
 pub struct Camera {
     origin: Point3,
@@ -9,48 +10,39 @@ pub struct Camera {
     u: Vec3,
     v: Vec3,
     lens_radius: f64,
-    time_min: f64,
-    time_max: f64,
+    pub time_min: f64,
+    pub time_max: f64,
 }
 
 impl Camera {
-    pub fn new(
-        lookfrom: Point3,
-        lookat: Point3,
-        vup: Vec3,
-        vfov: f64,
-        aspect_ratio: f64,
-        aperture: f64,
-        focus_dist: f64,
-        time_min: Option<f64>,
-        time_max: Option<f64>,
-    ) -> Camera {
-        let theta = vfov.to_radians();
+    pub fn new(config: CameraConfig) -> Camera {
+        let theta = config.vertical_fov.to_radians();
         let h = f64::tan(theta / 2.0);
         let viewport_height = 2.0 * h;
-        let viewport_width = aspect_ratio * viewport_height;
+        let viewport_width = config.aspect_ratio * viewport_height;
 
-        let w = match (lookfrom - lookat).unit() {
+        let w = match (config.look_from - config.look_at).unit() {
             Some(vec) => vec,
             None => panic!("lookfrom and lookat cannot be the same point."),
         };
-        let u = match vup.cross(w).unit() {
+        let u = match config.up.cross(w).unit() {
             Some(vec) => vec,
             None => panic!("vup and the look direction cannot be parallel."),
         };
         let v = w.cross(u);
 
-        let origin = lookfrom;
+        let origin = config.look_from;
 
-        let horizontal = focus_dist * viewport_width * u;
-        let vertical = focus_dist * viewport_height * v;
+        let horizontal = config.focus_distance * viewport_width * u;
+        let vertical = config.focus_distance * viewport_height * v;
 
-        let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - focus_dist * w;
+        let lower_left_corner =
+            origin - horizontal / 2.0 - vertical / 2.0 - config.focus_distance * w;
 
-        let lens_radius = aperture / 2.0;
+        let lens_radius = config.aperture / 2.0;
 
-        let time_min = time_min.unwrap_or(0.0);
-        let time_max = time_max.unwrap_or(0.0);
+        let time_min = config.time_min;
+        let time_max = config.time_max;
 
         Camera {
             origin,
@@ -78,6 +70,10 @@ impl Camera {
             .unwrap();
         let time = rng.random_range(self.time_min..=self.time_max);
 
-        Ray3 { origin, direction, time }
+        Ray3 {
+            origin,
+            direction,
+            time,
+        }
     }
 }

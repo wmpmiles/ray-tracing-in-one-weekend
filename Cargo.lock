@@ -119,6 +119,7 @@ name = "geometry3d"
 version = "0.1.0"
 dependencies = [
  "n_tuple",
+ "serde",
 ]
 
 [[package]]
@@ -248,6 +249,7 @@ dependencies = [
  "n_tuple",
  "png",
  "rand",
+ "serde",
 ]
 
 [[package]]

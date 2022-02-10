@@ -4,7 +4,7 @@ use geometry3d::*;
 pub struct HitRecord<'a> {
     pub point: Point3,
     pub normal: Vec3,
-    pub material: &'a dyn Material,
+    pub material: &'a Material,
     pub t: f64,
     pub u: f64,
     pub v: f64,
@@ -16,7 +16,7 @@ impl<'a> HitRecord<'a> {
         point: Point3,
         outward_normal: Vec3,
         ray_in: Ray3,
-        material: &'a dyn Material,
+        material: &'a Material,
         t: f64,
         u: f64,
         v: f64,

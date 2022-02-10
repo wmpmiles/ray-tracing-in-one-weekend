@@ -3,40 +3,48 @@ use crate::material::Material;
 use geometry3d::*;
 use std::cmp::Ordering;
 use std::rc::Rc;
+use serde::{Serialize, Deserialize};
 
-pub trait Object: CloneObject {
-    fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord>;
-    fn bounding_box(&self, t_min: f64, t_max: f64) -> Option<AABB>;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Object {
+    Sphere(Sphere),
+    List(List),
+    BVHNode(BVHNode),
 }
 
-pub trait CloneObject {
-    fn clone_object(&self) -> Box<dyn Object>;
-}
+impl Object {
+    pub fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        match self {
+            Object::Sphere(o) => o.hit(ray, t_min, t_max),
+            Object::List(o) => o.hit(ray, t_min, t_max),
+            Object::BVHNode(o) => o.hit(ray, t_min, t_max),
+        }
+    }
 
-impl<T> CloneObject for T
-where
-    T: Object + Clone + 'static,
-{
-    fn clone_object(&self) -> Box<dyn Object> {
-        Box::new(self.clone())
+    pub fn bounding_box(&self, t_min: f64, t_max: f64) -> Option<AABB> {
+        match self {
+            Object::Sphere(o) => o.bounding_box(t_min, t_max),
+            Object::List(o) => o.bounding_box(t_min, t_max),
+            Object::BVHNode(o) => o.bounding_box(t_min, t_max),
+        }
     }
 }
 
-impl Clone for Box<dyn Object> {
-    fn clone(&self) -> Self {
-        self.clone_object()
-    }
-}
-
-#[derive(Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Sphere {
     location: Ray3,
     radius: f64,
-    material: Box<dyn Material>,
+    material: Material,
+}
+
+impl From<Sphere> for Object {
+    fn from(s: Sphere) -> Object {
+        Object::Sphere(s)
+    }
 }
 
 impl Sphere {
-    pub fn new(location: Ray3, radius: f64, material: Box<dyn Material>) -> Sphere {
+    pub fn new(location: Ray3, radius: f64, material: Material) -> Sphere {
         Sphere {
             location,
             radius,
@@ -62,9 +70,7 @@ impl Sphere {
 
         (u, v)
     }
-}
 
-impl Object for Sphere {
     fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let center = self.center(ray.time);
 
@@ -92,9 +98,17 @@ impl Object for Sphere {
         let point = ray.at(t);
         let outward_normal = (point - center) / self.radius;
         let (u, v) = Sphere::uv(outward_normal.into());
-        let material = &*self.material;
+        let material = &self.material;
 
-        Some(HitRecord::new(point, outward_normal, ray, material, t, u, v))
+        Some(HitRecord::new(
+            point,
+            outward_normal,
+            ray,
+            material,
+            t,
+            u,
+            v,
+        ))
     }
 
     fn bounding_box(&self, time0: f64, time1: f64) -> Option<AABB> {
@@ -110,9 +124,15 @@ impl Object for Sphere {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct List {
-    objects: Vec<Box<dyn Object>>,
+    objects: Vec<Object>,
+}
+
+impl From<List> for Object {
+    fn from(l: List) -> Object {
+        Object::List(l)
+    }
 }
 
 impl List {
@@ -122,12 +142,10 @@ impl List {
         }
     }
 
-    pub fn add(&mut self, object: Box<dyn Object>) {
+    pub fn add(&mut self, object: Object) {
         self.objects.push(object);
     }
-}
 
-impl Object for List {
     fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let mut closest: Option<HitRecord> = None;
 
@@ -160,11 +178,17 @@ impl Default for List {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BVHNode {
     aabb: AABB,
-    left: Box<dyn Object>,
-    right: Box<dyn Object>,
+    left: Box<Object>,
+    right: Box<Object>,
+}
+
+impl From<BVHNode> for Object {
+    fn from(n: BVHNode) -> Object {
+        Object::BVHNode(n)
+    }
 }
 
 impl BVHNode {
@@ -184,20 +208,20 @@ impl BVHNode {
         Self::from_vec(objects, time0, time1)
     }
 
-    fn object_lo(t0: f64, t1: f64) -> impl Fn(&Box<dyn Object>) -> Point3 {
+    fn object_lo(t0: f64, t1: f64) -> impl Fn(&Object) -> Point3 {
         move |obj| obj.bounding_box(t0, t1).unwrap().lo()
     }
 
     fn axis(
-        f: Rc<impl Fn(&Box<dyn Object>) -> Point3 + 'static>,
+        f: Rc<impl Fn(&Object) -> Point3 + 'static>,
         g: impl Fn(Point3) -> f64 + 'static,
-    ) -> impl Fn(&Box<dyn Object>) -> f64 {
+    ) -> impl Fn(&Object) -> f64 {
         move |obj| g(f(obj))
     }
 
     fn cmp(
-        f: impl Fn(&Box<dyn Object>) -> f64,
-    ) -> impl Fn(&Box<dyn Object>, &Box<dyn Object>) -> Ordering {
+        f: impl Fn(&Object) -> f64,
+    ) -> impl Fn(&Object, &Object) -> Ordering {
         move |a, b| {
             let a = f(a);
             let b = f(b);
@@ -206,22 +230,22 @@ impl BVHNode {
     }
 
     fn lr(
-        objects: &mut [Box<dyn Object>],
-        f: impl Fn(&Box<dyn Object>) -> f64,
+        objects: &mut [Object],
+        f: impl Fn(&Object) -> f64,
         t0: f64,
         t1: f64,
-    ) -> (Box<BVHNode>, Box<BVHNode>, f64) {
+    ) -> (Object, Object, f64) {
         objects.sort_unstable_by(Self::cmp(f));
         let (lhs, rhs) = objects.split_at_mut(objects.len() / 2);
-        let left = Box::new(Self::from_vec(lhs, t0, t1));
-        let right = Box::new(Self::from_vec(rhs, t0, t1));
+        let left = Object::from(Self::from_vec(lhs, t0, t1));
+        let right = Object::from(Self::from_vec(rhs, t0, t1));
         let vl = left.bounding_box(t0, t1).unwrap().volume();
         let vr = right.bounding_box(t0, t1).unwrap().volume();
         let ratio = vl.max(vr) / vl.min(vr);
         (left, right, ratio)
     }
 
-    fn from_vec(objects: &mut [Box<dyn Object>], t0: f64, t1: f64) -> BVHNode {
+    fn from_vec(objects: &mut [Object], t0: f64, t1: f64) -> BVHNode {
         let lo = Rc::new(Self::object_lo(t0, t1));
         let x = Self::axis(lo.clone(), |p3| p3.x());
         let y = Self::axis(lo.clone(), |p3| p3.y());
@@ -256,11 +280,12 @@ impl BVHNode {
         let right_aabb = right.bounding_box(t0, t1).unwrap();
         let aabb = AABB::merge(Some(left_aabb), Some(right_aabb)).unwrap();
 
+        let left = Box::new(left);
+        let right = Box::new(right);
+
         BVHNode { aabb, left, right }
     }
-}
 
-impl Object for BVHNode {
     fn bounding_box(&self, _time0: f64, _time1: f64) -> Option<AABB> {
         Some(self.aabb)
     }

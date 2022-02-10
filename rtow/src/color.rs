@@ -1,4 +1,5 @@
 use n_tuple::*;
+use serde::{Serialize, Deserialize};
 
 /* Behaviours:
  * - Create and access r, g, b
@@ -35,7 +36,7 @@ impl std::convert::From<FloatRgb> for Rgb {
  * - Create and access r, g, b
  * - Multiply by scalar or vector attenuation values
  */
-#[derive(Copy, Clone, Default, PartialEq, Debug)]
+#[derive(Copy, Clone, Default, PartialEq, Debug, Serialize, Deserialize)]
 pub struct FloatRgb(NTuple<f64, 3>);
 
 impl FloatRgb {

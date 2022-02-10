@@ -1,9 +1,11 @@
 use crate::color::*;
+use crate::config::ImageConfig;
 
 pub struct Image {
-    pub aspect_ratio: f64,
+    pub filename: String,
     pub width: u32,
     pub height: u32,
+    pub aspect_ratio: f64,
     data: Vec<u8>,
 }
 
@@ -14,14 +16,18 @@ pub struct ImageIter {
 }
 
 impl Image {
-    pub fn new(aspect_ratio: f64, width: u32) -> Image {
-        let height = (width as f64 / aspect_ratio) as u32;
+    pub fn new(config: ImageConfig) -> Image {
+        let filename = config.filename;
+        let width = config.width;
+        let height = config.height;
+        let aspect_ratio = width as f64 / height as f64;
         let size = (width * height * 3) as usize;
         let data = Vec::with_capacity(size);
         Image {
-            aspect_ratio,
+            filename,
             width,
             height,
+            aspect_ratio,
             data,
         }
     }
@@ -34,12 +40,12 @@ impl Image {
         }
     }
 
-    pub fn write(&self, filename: &str) -> std::io::Result<()> {
+    pub fn write(&self) -> std::io::Result<()> {
         use std::fs::File;
         use std::io::BufWriter;
         use std::path::Path;
 
-        let path = Path::new(filename);
+        let path = Path::new(&self.filename);
         let file = File::create(path)?;
         let w = BufWriter::new(file);
 

@@ -3,42 +3,35 @@ use crate::color::FloatRgb;
 use crate::random::Random;
 use crate::texture::*;
 use geometry3d::*;
+use serde::{Serialize, Deserialize};
 
-pub trait Material: CloneMaterial {
-    fn scatter(&self, ray_in: Ray3, rec: &HitRecord) -> Option<(FloatRgb, Ray3)>;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Material {
+    Lambertian(Lambertian),
+    Metal(Metal),
+    Dielectric(Dielectric),
 }
 
-pub trait CloneMaterial {
-    fn clone_material(&self) -> Box<dyn Material>;
-}
-
-impl<T> CloneMaterial for T
-where
-    T: Material + Clone + 'static,
-{
-    fn clone_material(&self) -> Box<dyn Material> {
-        Box::new(self.clone())
+impl Material {
+    pub fn scatter(&self, ray_in: Ray3, rec: &HitRecord) -> Option<(FloatRgb, Ray3)> {
+        match self {
+            Material::Lambertian(m) => m.scatter(ray_in, rec),
+            Material::Metal(m) => m.scatter(ray_in, rec),
+            Material::Dielectric(m) => m.scatter(ray_in, rec),
+        }
     }
 }
 
-impl Clone for Box<dyn Material> {
-    fn clone(&self) -> Self {
-        self.clone_material()
-    }
-}
-
-#[derive(Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Lambertian {
-    albedo: Box<dyn Texture>,
+    albedo: Texture,
 }
 
 impl Lambertian {
-    pub fn new(albedo: Box<dyn Texture>) -> Lambertian {
+    pub fn new(albedo: Texture) -> Lambertian {
         Lambertian { albedo }
     }
-}
 
-impl Material for Lambertian {
     fn scatter(&self, ray_in: Ray3, rec: &HitRecord) -> Option<(FloatRgb, Ray3)> {
         // reject internal reflections from opaque material
         if !rec.front_face {
@@ -64,7 +57,7 @@ impl Material for Lambertian {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Metal {
     albedo: FloatRgb,
     fuzz: f64,
@@ -74,9 +67,7 @@ impl Metal {
     pub fn new(albedo: FloatRgb, fuzz: f64) -> Metal {
         Metal { albedo, fuzz }
     }
-}
 
-impl Material for Metal {
     fn scatter(&self, ray_in: Ray3, rec: &HitRecord) -> Option<(FloatRgb, Ray3)> {
         // reject internal reflections from opaque materials
         if !rec.front_face {
@@ -108,7 +99,7 @@ impl Material for Metal {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Dielectric {
     index_of_refraction: f64,
 }
@@ -133,9 +124,7 @@ impl Dielectric {
         let r_out_parallel = -parallel_len * normal;
         r_out_perp + r_out_parallel
     }
-}
 
-impl Material for Dielectric {
     fn scatter(&self, ray_in: Ray3, rec: &HitRecord) -> Option<(FloatRgb, Ray3)> {
         // calculate refraction ratio depending on in internal/external reflection
         let refraction_ratio = match rec.front_face {

@@ -1,42 +1,39 @@
 use crate::color::FloatRgb;
 use crate::hit_record::HitRecord;
+use serde::{Serialize, Deserialize};
 
-pub trait Texture: CloneTexture {
-    fn value(&self, rec: &HitRecord) -> FloatRgb;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Texture {
+    SolidColor(SolidColor),
+    CheckerTexture(CheckerTexture),
 }
 
-pub trait CloneTexture {
-    fn clone_texture(&self) -> Box<dyn Texture>;
-}
-
-impl<T> CloneTexture for T
-where
-    T: Texture + Clone + 'static,
-{
-    fn clone_texture(&self) -> Box<dyn Texture> {
-        Box::new(self.clone())
+impl Texture {
+    pub fn value(&self, rec: &HitRecord) -> FloatRgb {
+        match self {
+            Texture::SolidColor(t) => t.value(rec),
+            Texture::CheckerTexture(t) => t.value(rec),
+        }
     }
 }
 
-impl Clone for Box<dyn Texture> {
-    fn clone(&self) -> Box<dyn Texture> {
-        self.clone_texture()
-    }
-}
-
-impl From<FloatRgb> for Box<dyn Texture> {
-    fn from(frgb: FloatRgb) -> Box<dyn Texture> {
+impl From<FloatRgb> for Texture {
+    fn from(frgb: FloatRgb) -> Texture {
         let t: SolidColor = frgb.into();
-        Box::new(t)
+        Texture::SolidColor(t)
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct SolidColor(FloatRgb);
 
 impl SolidColor {
     pub fn new(r: f64, g: f64, b: f64) -> SolidColor {
         SolidColor(FloatRgb::new(r, g, b))
+    }
+
+    fn value(&self, _rec: &HitRecord) -> FloatRgb {
+        self.0
     }
 }
 
@@ -46,25 +43,18 @@ impl From<FloatRgb> for SolidColor {
     }
 }
 
-impl Texture for SolidColor {
-    fn value(&self, _rec: &HitRecord) -> FloatRgb {
-        self.0
-    }
-}
-
-#[derive(Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckerTexture {
-    odd: Box<dyn Texture>,
-    even: Box<dyn Texture>,
+    odd: Box<Texture>,
+    even: Box<Texture>,
 }
 
 impl CheckerTexture {
-    pub fn new(odd: Box<dyn Texture>, even: Box<dyn Texture>) -> CheckerTexture {
+    pub fn new(odd: Texture, even: Texture) -> CheckerTexture {
+        let (odd, even) = (Box::new(odd), Box::new(even));
         CheckerTexture { odd, even }
     }
-}
 
-impl Texture for CheckerTexture {
     fn value(&self, rec: &HitRecord) -> FloatRgb {
         let p = rec.point;
         let sines = (10.0 * p.x()).sin() * (10.0 * p.y()).sin() * (10.0 * p.z()).sin();
@@ -72,3 +62,4 @@ impl Texture for CheckerTexture {
         t.value(rec)
     }
 }
+
