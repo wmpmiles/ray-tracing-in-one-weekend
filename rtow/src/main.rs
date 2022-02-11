@@ -6,9 +6,16 @@ use rtow::image::Image;
 use rtow::object::*;
 use rtow::sampler::SquareSampler;
 use std::error::Error;
+use std::env;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut config = Config::read("random_scene.json")?;
+    let mut filename = "scene.json";
+    let args: Vec<String> = env::args().collect();
+    if args.len() == 2 {
+        filename = &args[1];
+    }
+
+    let mut config = Config::read(filename)?;
 
     let mut image = Image::new(config.image);
     let camera = Camera::new(config.camera, &image);
