@@ -1,22 +1,21 @@
-use crate::material::*;
 use geometry3d::*;
 
-pub struct HitRecord<'a> {
+#[derive(Debug, Clone, Copy)]
+pub struct HitRecord {
     pub point: Point3,
     pub normal: Vec3,
-    pub material: &'a Material,
+    pub ray_in: Ray3,
     pub t: f64,
     pub u: f64,
     pub v: f64,
     pub front_face: bool,
 }
 
-impl<'a> HitRecord<'a> {
+impl HitRecord {
     pub fn new(
         point: Point3,
         outward_normal: Vec3,
         ray_in: Ray3,
-        material: &'a Material,
         t: f64,
         u: f64,
         v: f64,
@@ -31,7 +30,7 @@ impl<'a> HitRecord<'a> {
         HitRecord {
             point,
             normal,
-            material,
+            ray_in,
             t,
             u,
             v,

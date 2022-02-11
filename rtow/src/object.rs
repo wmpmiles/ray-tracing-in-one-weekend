@@ -1,9 +1,9 @@
 use crate::hit_record::HitRecord;
 use crate::material::Material;
 use geometry3d::*;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::rc::Rc;
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Object {
@@ -13,7 +13,7 @@ pub enum Object {
 }
 
 impl Object {
-    pub fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
+    pub fn hit(&mut self, ray: Ray3, t_min: f64, t_max: f64) -> Option<(HitRecord, &mut Material)> {
         match self {
             Object::Sphere(o) => o.hit(ray, t_min, t_max),
             Object::List(o) => o.hit(ray, t_min, t_max),
@@ -71,7 +71,7 @@ impl Sphere {
         (u, v)
     }
 
-    fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
+    fn hit(&mut self, ray: Ray3, t_min: f64, t_max: f64) -> Option<(HitRecord, &mut Material)> {
         let center = self.center(ray.time);
 
         let oc = ray.origin - center;
@@ -98,16 +98,11 @@ impl Sphere {
         let point = ray.at(t);
         let outward_normal = (point - center) / self.radius;
         let (u, v) = Sphere::uv(outward_normal.into());
-        let material = &self.material;
+        let material = &mut self.material;
 
-        Some(HitRecord::new(
-            point,
-            outward_normal,
-            ray,
+        Some((
+            HitRecord::new(point, outward_normal, ray, t, u, v),
             material,
-            t,
-            u,
-            v,
         ))
     }
 
@@ -146,13 +141,13 @@ impl List {
         self.objects.push(object);
     }
 
-    fn hit(&self, ray: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
-        let mut closest: Option<HitRecord> = None;
+    fn hit(&mut self, ray: Ray3, t_min: f64, t_max: f64) -> Option<(HitRecord, &mut Material)> {
+        let mut closest: Option<(HitRecord, &mut Material)> = None;
 
-        for object in &self.objects {
+        for object in &mut self.objects {
             let t_max = match &closest {
                 None => t_max,
-                Some(hit) => hit.t,
+                Some((rec, _mat)) => rec.t,
             };
 
             if let Some(hit) = object.hit(ray, t_min, t_max) {
@@ -219,9 +214,7 @@ impl BVHNode {
         move |obj| g(f(obj))
     }
 
-    fn cmp(
-        f: impl Fn(&Object) -> f64,
-    ) -> impl Fn(&Object, &Object) -> Ordering {
+    fn cmp(f: impl Fn(&Object) -> f64) -> impl Fn(&Object, &Object) -> Ordering {
         move |a, b| {
             let a = f(a);
             let b = f(b);
@@ -290,16 +283,16 @@ impl BVHNode {
         Some(self.aabb)
     }
 
-    fn hit(&self, ray_in: Ray3, t_min: f64, t_max: f64) -> Option<HitRecord> {
+    fn hit(&mut self, ray_in: Ray3, t_min: f64, t_max: f64) -> Option<(HitRecord, &mut Material)> {
         if !self.aabb.hit(ray_in, t_min, t_max) {
             return None;
         }
 
-        if let Some(hit_l) = self.left.hit(ray_in, t_min, t_max) {
-            if let Some(hit_r) = self.right.hit(ray_in, t_min, hit_l.t) {
-                Some(hit_r)
+        if let Some((hit_l, mat_l)) = self.left.hit(ray_in, t_min, t_max) {
+            if let Some((hit_r, mat_r)) = self.right.hit(ray_in, t_min, hit_l.t) {
+                Some((hit_r, mat_r))
             } else {
-                Some(hit_l)
+                Some((hit_l, mat_l))
             }
         } else {
             self.right.hit(ray_in, t_min, t_max)

@@ -1,18 +1,21 @@
 use crate::color::FloatRgb;
 use crate::hit_record::HitRecord;
+use crate::perlin::Perlin;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Texture {
     SolidColor(SolidColor),
     CheckerTexture(CheckerTexture),
+    NoiseTexture(NoiseTexture),
 }
 
 impl Texture {
-    pub fn value(&self, rec: &HitRecord) -> FloatRgb {
+    pub fn value(&mut self, rec: HitRecord) -> FloatRgb {
         match self {
             Texture::SolidColor(t) => t.value(rec),
             Texture::CheckerTexture(t) => t.value(rec),
+            Texture::NoiseTexture(t) => t.value(rec),
         }
     }
 }
@@ -32,7 +35,7 @@ impl SolidColor {
         SolidColor(FloatRgb::new(r, g, b))
     }
 
-    fn value(&self, _rec: &HitRecord) -> FloatRgb {
+    fn value(&self, _rec: HitRecord) -> FloatRgb {
         self.0
     }
 }
@@ -55,11 +58,28 @@ impl CheckerTexture {
         CheckerTexture { odd, even }
     }
 
-    fn value(&self, rec: &HitRecord) -> FloatRgb {
+    fn value(&mut self, rec: HitRecord) -> FloatRgb {
         let p = rec.point;
         let sines = (10.0 * p.x()).sin() * (10.0 * p.y()).sin() * (10.0 * p.z()).sin();
-        let t = if sines < 0.0 { &self.odd } else { &self.even };
+        let t = if sines < 0.0 { &mut self.odd } else { &mut self.even };
         t.value(rec)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NoiseTexture {
+    noise: Perlin,
+}
+
+impl NoiseTexture {
+    pub fn new(noise: Perlin) -> NoiseTexture {
+        NoiseTexture { noise }
+    }
+
+    pub fn value(&mut self, rec: HitRecord) -> FloatRgb {
+        let white = FloatRgb::new(1.0, 1.0, 1.0);
+        let black = FloatRgb::new(0.0, 0.0, 0.0);
+        white.mix(black, self.noise.noise(rec.point))
     }
 }
 

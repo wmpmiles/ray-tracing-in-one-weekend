@@ -1,0 +1,101 @@
+{
+  "image": {
+    "filename": "perlin_spheres.png",
+    "width": 800,
+    "height": 600
+  },
+  "camera": {
+    "look_from": [
+      13.0,
+      2.0,
+      3.0
+    ],
+    "look_at": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "up": [
+      0.0,
+      1.0,
+      0.0
+    ],
+    "vertical_fov": 20.0,
+    "aperture": 0.0,
+    "focus_distance": 10.0,
+    "time_min": 0.0,
+    "time_max": 1.0
+  },
+  "sampler": {
+    "n": 3,
+    "max_depth": 50
+  },
+  "scene_list": {
+    "objects": [
+      {
+        "Sphere": {
+          "location": {
+            "origin": [
+              0.0,
+              -1000.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "time": 0.0
+          },
+          "radius": 1000.0,
+          "material": {
+            "Lambertian": {
+              "albedo": {
+                "NoiseTexture": {
+                  "noise": {
+                    "U": {
+                        "seed": 0,
+                        "size": 256
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "Sphere": {
+          "location": {
+            "origin": [
+              0.0,
+              2.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "time": 0.0
+          },
+          "radius": 2.0,
+          "material": {
+            "Lambertian": {
+              "albedo": {
+                "NoiseTexture": {
+                  "noise": {
+                    "U": {
+                        "seed": 0,
+                        "size": 256
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

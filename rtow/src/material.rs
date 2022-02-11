@@ -13,11 +13,11 @@ pub enum Material {
 }
 
 impl Material {
-    pub fn scatter(&self, ray_in: Ray3, rec: &HitRecord) -> Option<(FloatRgb, Ray3)> {
+    pub fn scatter(&mut self, rec: HitRecord) -> Option<(FloatRgb, Ray3)> {
         match self {
-            Material::Lambertian(m) => m.scatter(ray_in, rec),
-            Material::Metal(m) => m.scatter(ray_in, rec),
-            Material::Dielectric(m) => m.scatter(ray_in, rec),
+            Material::Lambertian(m) => m.scatter(rec),
+            Material::Metal(m) => m.scatter(rec),
+            Material::Dielectric(m) => m.scatter(rec),
         }
     }
 }
@@ -32,7 +32,7 @@ impl Lambertian {
         Lambertian { albedo }
     }
 
-    fn scatter(&self, ray_in: Ray3, rec: &HitRecord) -> Option<(FloatRgb, Ray3)> {
+    fn scatter(&mut self, rec: HitRecord) -> Option<(FloatRgb, Ray3)> {
         // reject internal reflections from opaque material
         if !rec.front_face {
             return None;
@@ -49,7 +49,7 @@ impl Lambertian {
         };
 
         let origin = rec.point;
-        let time = ray_in.time;
+        let time = rec.ray_in.time;
 
         let attenuation = self.albedo.value(rec);
 
@@ -68,14 +68,14 @@ impl Metal {
         Metal { albedo, fuzz }
     }
 
-    fn scatter(&self, ray_in: Ray3, rec: &HitRecord) -> Option<(FloatRgb, Ray3)> {
+    fn scatter(&self, rec: HitRecord) -> Option<(FloatRgb, Ray3)> {
         // reject internal reflections from opaque materials
         if !rec.front_face {
             return None;
         }
 
         // calculate pure specular reflection vector
-        let reflection = ray_in.direction.reflection(rec.normal);
+        let reflection = rec.ray_in.direction.reflection(rec.normal);
         let mut rng = Random::new(rand::thread_rng());
         let mut direction;
         loop {
@@ -93,7 +93,7 @@ impl Metal {
         direction = direction.unit().unwrap();
 
         let origin = rec.point;
-        let time = ray_in.time;
+        let time = rec.ray_in.time;
 
         Some((self.albedo, Ray3 { origin, direction, time }))
     }
@@ -125,14 +125,14 @@ impl Dielectric {
         r_out_perp + r_out_parallel
     }
 
-    fn scatter(&self, ray_in: Ray3, rec: &HitRecord) -> Option<(FloatRgb, Ray3)> {
+    fn scatter(&self, rec: HitRecord) -> Option<(FloatRgb, Ray3)> {
         // calculate refraction ratio depending on in internal/external reflection
         let refraction_ratio = match rec.front_face {
             true => 1.0 / self.index_of_refraction,
             false => self.index_of_refraction,
         };
 
-        let cos_theta = -rec.normal.dot(ray_in.direction);
+        let cos_theta = -rec.normal.dot(rec.ray_in.direction);
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
 
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
@@ -140,12 +140,12 @@ impl Dielectric {
         let reflect = cannot_refract || reflectance > rand::random();
 
         let direction = match reflect {
-            true => ray_in.direction.reflection(rec.normal),
-            false => Self::refraction(ray_in.direction, rec.normal, refraction_ratio),
+            true => rec.ray_in.direction.reflection(rec.normal),
+            false => Self::refraction(rec.ray_in.direction, rec.normal, refraction_ratio),
         };
 
         let origin = rec.point;
-        let time = ray_in.time;
+        let time = rec.ray_in.time;
 
         Some((FloatRgb::new(1.0, 1.0, 1.0), Ray3 { origin, direction, time }))
     }

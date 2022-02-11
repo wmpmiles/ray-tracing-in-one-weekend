@@ -9,6 +9,7 @@ use geometry3d::*;
 use rand::{Rng};
 use rand::distributions::{Standard, Distribution, uniform::{SampleUniform, SampleRange}};
 
+#[derive(Debug, Clone)]
 pub struct Random<T: Rng>(T);
 
 impl<T: Rng> Random<T> {

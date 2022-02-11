@@ -205,6 +205,12 @@ impl Point3 {
     }
 }
 
+impl std::convert::From<Point3> for NTuple<f64, 3> {
+    fn from(p: Point3) -> Self {
+        p.0
+    }
+}
+
 /// Convert from position vector to point.
 impl std::convert::From<Vec3> for Point3 {
     fn from(vec: Vec3) -> Self {

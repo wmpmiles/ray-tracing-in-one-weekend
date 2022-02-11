@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut image = Image::new(config.image);
     let camera = Camera::new(config.camera, &image);
     let sampler = SquareSampler::new(config.sampler, &image);
-    let opt_scene = Object::from(BVHNode::from_list(
+    let mut opt_scene = Object::from(BVHNode::from_list(
         &mut config.scene_list,
         camera.time_min,
         camera.time_max,
@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         for (u, v) in sampler.iter(x, y) {
             let ray = camera.get_ray(u, v);
-            pixel_color += ray_color(ray, &opt_scene, sampler.max_depth);
+            pixel_color += ray_color(ray, &mut opt_scene, sampler.max_depth);
         }
 
         image.add_pixel(pixel_color.average().into());
@@ -44,22 +44,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn ray_color(ray: Ray3, world: &Object, depth: u32) -> FloatRgb {
-    let one = FloatRgb::new(1.0, 1.0, 1.0);
+fn ray_color(ray: Ray3, world: &mut Object, depth: u32) -> FloatRgb {
+    let black = FloatRgb::new(0.0, 0.0, 0.0);
+    let white = FloatRgb::new(1.0, 1.0, 1.0);
     let base = FloatRgb::new(0.5, 0.7, 1.0);
-    let none = FloatRgb::new(0.0, 0.0, 0.0);
     const MIN: f64 = 0.001; // minimize hitting the same point due to floating point approximation
 
     if depth == 0 {
-        none
-    } else if let Some(rec) = world.hit(ray, MIN, f64::INFINITY) {
-        if let Some((attenuation, ray)) = rec.material.scatter(ray, &rec) {
+        black
+    } else if let Some((rec, mat)) = world.hit(ray, MIN, f64::INFINITY) {
+        if let Some((attenuation, ray)) = mat.scatter(rec) {
             attenuation * ray_color(ray, world, depth - 1)
         } else {
-            none
+            black
         }
     } else {
         let t = 0.5 * (ray.direction.y() + 1.0);
-        base.mix(one, t)
+        base.mix(white, t)
     }
 }
