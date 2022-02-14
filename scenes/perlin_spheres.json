@@ -27,7 +27,7 @@
     "time_max": 1.0
   },
   "sampler": {
-    "n": 3,
+    "n": 5,
     "max_depth": 50
   },
   "scene_list": {
