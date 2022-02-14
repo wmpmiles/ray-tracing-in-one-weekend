@@ -1,4 +1,5 @@
 use crate::color::FloatRgb;
+use geometry3d::*;
 use crate::hit_record::HitRecord;
 use crate::perlin::Perlin;
 use serde::{Serialize, Deserialize};
@@ -69,17 +70,19 @@ impl CheckerTexture {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NoiseTexture {
     noise: Perlin,
+    scale: f64,
 }
 
 impl NoiseTexture {
-    pub fn new(noise: Perlin) -> NoiseTexture {
-        NoiseTexture { noise }
+    pub fn new(noise: Perlin, scale: f64) -> NoiseTexture {
+        NoiseTexture { noise, scale }
     }
 
     pub fn value(&mut self, rec: HitRecord) -> FloatRgb {
         let white = FloatRgb::new(1.0, 1.0, 1.0);
         let black = FloatRgb::new(0.0, 0.0, 0.0);
-        white.mix(black, self.noise.noise(rec.point))
+        let point = Point3::from(self.scale * Vec3::from(rec.point));
+        white.mix(black, self.noise.noise(point))
     }
 }
 
