@@ -1,8 +1,8 @@
 use crate::color::FloatRgb;
-use geometry3d::*;
 use crate::hit_record::HitRecord;
 use crate::perlin::Perlin;
-use serde::{Serialize, Deserialize};
+use geometry3d::*;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Texture {
@@ -62,7 +62,11 @@ impl CheckerTexture {
     fn value(&mut self, rec: HitRecord) -> FloatRgb {
         let p = rec.point;
         let sines = (10.0 * p.x()).sin() * (10.0 * p.y()).sin() * (10.0 * p.z()).sin();
-        let t = if sines < 0.0 { &mut self.odd } else { &mut self.even };
+        let t = if sines < 0.0 {
+            &mut self.odd
+        } else {
+            &mut self.even
+        };
         t.value(rec)
     }
 }
@@ -71,18 +75,27 @@ impl CheckerTexture {
 pub struct NoiseTexture {
     noise: Perlin,
     scale: f64,
+    depth: usize,
 }
 
 impl NoiseTexture {
-    pub fn new(noise: Perlin, scale: f64) -> NoiseTexture {
-        NoiseTexture { noise, scale }
+    pub fn new(noise: Perlin, scale: f64, depth: usize) -> NoiseTexture {
+        NoiseTexture {
+            noise,
+            scale,
+            depth,
+        }
     }
 
     pub fn value(&mut self, rec: HitRecord) -> FloatRgb {
         let white = FloatRgb::new(1.0, 1.0, 1.0);
         let black = FloatRgb::new(0.0, 0.0, 0.0);
         let point = Point3::from(self.scale * Vec3::from(rec.point));
-        white.mix(black, 0.5 * (1.0 + self.noise.noise(point)))
+        let noise = 0.5
+            * (1.0
+                + f64::sin(
+                    self.scale * point.z() + 10.0 * self.noise.turbulence(point, self.depth),
+                ));
+        white.mix(black, noise)
     }
 }
-

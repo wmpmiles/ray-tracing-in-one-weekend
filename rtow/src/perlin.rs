@@ -26,6 +26,20 @@ pub enum Perlin {
 }
 
 impl Perlin {
+    pub fn turbulence(&mut self, p: Point3, depth: usize) -> f64 {
+        let mut accum = 0.0;
+        let mut p = p;
+        let mut weight = 1.0;
+
+        for _ in 0..depth {
+            accum += weight * self.noise(p);
+            weight *= 0.5;
+            p = Point3::from(2.0 * Vec3::from(p));
+        }
+
+        accum.abs()
+    }
+
     pub fn noise(&mut self, p: Point3) -> f64 {
         if let Perlin::U(u) = self {
             *self = Perlin::I(Perlin::init(u));
