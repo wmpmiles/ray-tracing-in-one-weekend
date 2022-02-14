@@ -82,7 +82,7 @@ impl NoiseTexture {
         let white = FloatRgb::new(1.0, 1.0, 1.0);
         let black = FloatRgb::new(0.0, 0.0, 0.0);
         let point = Point3::from(self.scale * Vec3::from(rec.point));
-        white.mix(black, self.noise.noise(point))
+        white.mix(black, 0.5 * (1.0 + self.noise.noise(point)))
     }
 }
 

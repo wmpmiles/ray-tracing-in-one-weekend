@@ -117,6 +117,18 @@ impl Vec3 {
     }
 }
 
+impl std::convert::From<Vec3> for NTuple<f64, 3> {
+    fn from(v: Vec3) -> Self {
+        v.0
+    }
+}
+
+impl std::convert::From<NTuple<f64, 3>> for Vec3 {
+    fn from(n: NTuple<f64, 3>) -> Self {
+        Vec3(n)
+    }
+}
+
 /// Sum of two vectors.
 impl std::ops::Add for Vec3 {
     type Output = Vec3;
@@ -208,6 +220,12 @@ impl Point3 {
 impl std::convert::From<Point3> for NTuple<f64, 3> {
     fn from(p: Point3) -> Self {
         p.0
+    }
+}
+
+impl std::convert::From<NTuple<f64, 3>> for Point3 {
+    fn from(n: NTuple<f64, 3>) -> Self {
+        Point3(n)
     }
 }
 
