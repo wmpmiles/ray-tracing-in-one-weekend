@@ -4,10 +4,12 @@ use geometry3d::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::rc::Rc;
+use std::ops::RangeInclusive;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Object {
     Sphere(Sphere),
+    XYRect(XYRect),
     List(List),
     BVHNode(BVHNode),
 }
@@ -16,6 +18,7 @@ impl Object {
     pub fn hit(&mut self, ray: Ray3, t_min: f64, t_max: f64) -> Option<(HitRecord, &mut Material)> {
         match self {
             Object::Sphere(o) => o.hit(ray, t_min, t_max),
+            Object::XYRect(o) => o.hit(ray, t_min, t_max),
             Object::List(o) => o.hit(ray, t_min, t_max),
             Object::BVHNode(o) => o.hit(ray, t_min, t_max),
         }
@@ -24,6 +27,7 @@ impl Object {
     pub fn bounding_box(&self, t_min: f64, t_max: f64) -> Option<AABB> {
         match self {
             Object::Sphere(o) => o.bounding_box(t_min, t_max),
+            Object::XYRect(o) => o.bounding_box(t_min, t_max),
             Object::List(o) => o.bounding_box(t_min, t_max),
             Object::BVHNode(o) => o.bounding_box(t_min, t_max),
         }
@@ -299,3 +303,39 @@ impl BVHNode {
         }
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct XYRect {
+    material: Material,
+    x: RangeInclusive<f64>,
+    y: RangeInclusive<f64>,
+    z: f64,
+}
+
+impl XYRect {
+    fn hit(&mut self, ray_in: Ray3, t_min: f64, t_max: f64) -> Option<(HitRecord, &mut Material)> {
+        let t = (self.z - ray_in.origin.z()) / ray_in.direction.z();
+        if t < t_min || t > t_max {
+            return None;
+        }
+
+        let p = ray_in.at(t);
+        if !self.x.contains(&p.x()) || !self.y.contains(&p.y()) {
+            return None;
+        }
+
+        let u = (p.x() - self.x.start()) / (self.x.end() - self.x.start());
+        let v = (p.y() - self.y.start()) / (self.y.end() - self.y.start());
+        let outward_normal = Vec3::new(0.0, 0.0, 1.0);
+
+        Some((HitRecord::new(p, outward_normal, ray_in, t, u, v), &mut self.material))
+    }
+
+    fn bounding_box(&self, _time0: f64, _time1: f64) -> Option<AABB> {
+        let lower = Point3::new(*self.x.start(), *self.y.start(), self.z - f64::EPSILON);
+        let upper = Point3::new(*self.x.end(), *self.y.end(), self.z + f64::EPSILON);
+        Some(AABB::new(lower, upper))
+    }
+
+}
+
