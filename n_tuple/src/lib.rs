@@ -1,15 +1,12 @@
-use serde::{Serialize, Deserialize};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
 pub trait TupleMember: Copy + Clone + PartialEq + Default + Serialize + DeserializeOwned {}
 impl<T: Copy + Clone + PartialEq + Default + Serialize + DeserializeOwned> TupleMember for T {}
 
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
-pub struct NTuple<T, const N: usize>(
-    #[serde(with = "BigArray")]
-    [T; N]
-)
+pub struct NTuple<T, const N: usize>(#[serde(with = "BigArray")] [T; N])
 where
     T: TupleMember;
 
@@ -25,7 +22,7 @@ macro_rules! ntuple {
     ($($element:expr),*) => { NTuple::from([$($element, )*]) }
 }
 
-impl<T, const N: usize> NTuple<T, N> 
+impl<T, const N: usize> NTuple<T, N>
 where
     T: TupleMember,
 {
@@ -102,6 +99,15 @@ where
     }
 }
 
+impl<T, const N: usize> std::convert::From<&[T]> for NTuple<T, N>
+where
+    T: TupleMember,
+{
+    fn from(slice: &[T]) -> Self {
+        let array: [T; N] = slice.try_into().expect("Slice with incorrect length.");
+        NTuple::from(array)
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -161,4 +167,3 @@ mod tests {
         assert_eq!(t_de, t);
     }
 }
-

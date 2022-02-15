@@ -62,6 +62,12 @@ impl FloatRgb {
     }
 }
 
+impl std::convert::From<NTuple<f64, 3>> for FloatRgb {
+    fn from(ntuple: NTuple<f64,3>) -> Self {
+        FloatRgb(ntuple)
+    }
+}
+
 impl std::ops::Mul<FloatRgb> for FloatRgb {
     type Output = Self;
 
