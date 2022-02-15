@@ -10,6 +10,7 @@ pub enum Material {
     Lambertian(Lambertian),
     Metal(Metal),
     Dielectric(Dielectric),
+    DiffuseLight(DiffuseLight),
 }
 
 impl Material {
@@ -18,6 +19,14 @@ impl Material {
             Material::Lambertian(m) => m.scatter(rec),
             Material::Metal(m) => m.scatter(rec),
             Material::Dielectric(m) => m.scatter(rec),
+            _ => None
+        }
+    }
+
+    pub fn emit(&mut self, rec: HitRecord) -> FloatRgb {
+        match self {
+            Material::DiffuseLight(m) => m.emit(rec),
+            _ => FloatRgb::new(0.0, 0.0, 0.0)
         }
     }
 }
@@ -150,3 +159,19 @@ impl Dielectric {
         Some((FloatRgb::new(1.0, 1.0, 1.0), Ray3 { origin, direction, time }))
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiffuseLight {
+    emit: Texture,
+}
+
+impl DiffuseLight {
+    pub fn new(emit: Texture) -> DiffuseLight {
+        DiffuseLight { emit }
+    }
+
+    fn emit(&mut self, rec: HitRecord) -> FloatRgb {
+        self.emit.value(rec)
+    }
+}
+

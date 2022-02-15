@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
 use geometry3d::*;
 use crate::object::List;
+use crate::color::FloatRgb;
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
@@ -12,6 +13,7 @@ pub struct Config {
     pub camera: CameraConfig,
     pub sampler: SamplerConfig,
     pub scene_list: List,
+    pub background_color: FloatRgb,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

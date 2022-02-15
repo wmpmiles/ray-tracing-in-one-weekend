@@ -5,8 +5,8 @@ use rtow::config::Config;
 use rtow::image::Image;
 use rtow::object::*;
 use rtow::sampler::SquareSampler;
-use std::error::Error;
 use std::env;
+use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut filename = "scene.json";
@@ -32,7 +32,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         for (u, v) in sampler.iter(x, y) {
             let ray = camera.get_ray(u, v);
-            pixel_color += ray_color(ray, &mut opt_scene, sampler.max_depth);
+            pixel_color += ray_color(
+                ray,
+                config.background_color,
+                &mut opt_scene,
+                sampler.max_depth,
+            );
         }
 
         image.add_pixel(pixel_color.average().into());
@@ -44,22 +49,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn ray_color(ray: Ray3, world: &mut Object, depth: u32) -> FloatRgb {
-    let black = FloatRgb::new(0.0, 0.0, 0.0);
-    let white = FloatRgb::new(1.0, 1.0, 1.0);
-    let base = FloatRgb::new(0.5, 0.7, 1.0);
+fn ray_color(ray: Ray3, background: FloatRgb, world: &mut Object, depth: u32) -> FloatRgb {
     const MIN: f64 = 0.001; // minimize hitting the same point due to floating point approximation
 
     if depth == 0 {
-        black
+        FloatRgb::new(0.0, 0.0, 0.0)
     } else if let Some((rec, mat)) = world.hit(ray, MIN, f64::INFINITY) {
+        let emitted = mat.emit(rec);
         if let Some((attenuation, ray)) = mat.scatter(rec) {
-            attenuation * ray_color(ray, world, depth - 1)
+            emitted + attenuation * ray_color(ray, background, world, depth - 1)
         } else {
-            black
+            emitted
         }
     } else {
-        let t = 0.5 * (ray.direction.y() + 1.0);
-        base.mix(white, t)
+        background
     }
 }

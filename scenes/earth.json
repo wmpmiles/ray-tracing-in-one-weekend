@@ -30,6 +30,11 @@
     "n": 5,
     "max_depth": 50
   },
+  "background_color": [
+      0.7,
+      0.8,
+      1.0
+  ],
   "scene_list": {
     "objects": [
       {
@@ -53,7 +58,7 @@
               "albedo": {
                 "ImageTexture": {
                   "U": {
-                    "filename": "scenes/earth.png"
+                    "filename": "scenes/textures/earth.png"
                   }
                 }
               }

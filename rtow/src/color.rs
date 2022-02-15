@@ -62,6 +62,14 @@ impl FloatRgb {
     }
 }
 
+impl std::ops::Add<FloatRgb> for FloatRgb {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0.combine(rhs.0, |x, y| x + y))
+    }
+}
+
 impl std::convert::From<NTuple<f64, 3>> for FloatRgb {
     fn from(ntuple: NTuple<f64,3>) -> Self {
         FloatRgb(ntuple)

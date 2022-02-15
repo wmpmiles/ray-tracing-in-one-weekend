@@ -1,6 +1,6 @@
 {
   "image": {
-    "filename": "render.png",
+    "filename": "random_scene_render.png",
     "width": 400,
     "height": 300
   },
@@ -30,6 +30,11 @@
     "n": 3,
     "max_depth": 50
   },
+  "background_color": [
+      0.7,
+      0.8,
+      1.0
+  ],
   "scene_list": {
       "objects": [
         {
