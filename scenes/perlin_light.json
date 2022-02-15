@@ -1,0 +1,134 @@
+{
+  "image": {
+    "filename": "perlin_light_render.png",
+    "width": 800,
+    "height": 600
+  },
+  "camera": {
+    "look_from": [
+      26.0,
+      3.0,
+      6.0
+    ],
+    "look_at": [
+      0.0,
+      2.0,
+      0.0
+    ],
+    "up": [
+      0.0,
+      1.0,
+      0.0
+    ],
+    "vertical_fov": 20.0,
+    "aperture": 0.0,
+    "focus_distance": 10.0,
+    "time_min": 0.0,
+    "time_max": 1.0
+  },
+  "sampler": {
+    "n": 20,
+    "max_depth": 50
+  },
+  "background_color": [
+      0.0,
+      0.0,
+      0.0
+  ],
+  "scene_list": {
+    "objects": [
+      {
+        "XYRect": {
+          "x": {
+            "start": 3.0,
+            "end": 5.0
+          },
+          "y": {
+            "start": 1.0,
+            "end": 3.0
+          },
+          "z": -2.0,
+          "material": {
+            "DiffuseLight": {
+              "emit": {
+                "SolidColor": [
+                  4.0,
+                  4.0,
+                  4.0
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "Sphere": {
+          "location": {
+            "origin": [
+              0.0,
+              -1000.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "time": 0.0
+          },
+          "radius": 1000.0,
+          "material": {
+            "Lambertian": {
+              "albedo": {
+                "NoiseTexture": {
+                  "noise": {
+                    "U": {
+                        "seed": 0,
+                        "size": 256
+                    }
+                  },
+                  "scale": 4.0,
+                  "depth": 7
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "Sphere": {
+          "location": {
+            "origin": [
+              0.0,
+              2.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "time": 0.0
+          },
+          "radius": 2.0,
+          "material": {
+            "Lambertian": {
+              "albedo": {
+                "NoiseTexture": {
+                  "noise": {
+                    "U": {
+                        "seed": 0,
+                        "size": 256
+                    }
+                  },
+                  "scale": 4.0,
+                  "depth": 7
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}
