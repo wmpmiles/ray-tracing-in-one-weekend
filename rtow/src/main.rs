@@ -22,8 +22,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let sampler = SquareSampler::new(config.sampler, &image);
     let mut opt_scene = Object::from(BVHNode::from_list(
         &mut config.scene_list,
-        camera.time_min,
-        camera.time_max,
+        TRange {
+            start: camera.time_min,
+            end: camera.time_max,
+        },
     ));
 
     // using bottom left as (0,0)
@@ -50,11 +52,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn ray_color(ray: Ray3, background: FloatRgb, world: &mut Object, depth: u32) -> FloatRgb {
-    const MIN: f64 = 0.001; // minimize hitting the same point due to floating point approximation
+    // minimize hitting the same point due to floating point approximation
+    const RANGE: TRange<f64> = TRange {
+        start: 0.001,
+        end: f64::INFINITY,
+    };
 
     if depth == 0 {
         FloatRgb::new(0.0, 0.0, 0.0)
-    } else if let Some((rec, mat)) = world.hit(ray, MIN, f64::INFINITY) {
+    } else if let Some((rec, mat)) = world.hit(ray, RANGE) {
         let emitted = mat.emit(rec);
         if let Some((attenuation, ray)) = mat.scatter(rec) {
             emitted + attenuation * ray_color(ray, background, world, depth - 1)

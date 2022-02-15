@@ -10,7 +10,7 @@ use rand::{Rng};
 use rand::distributions::{Standard, Distribution, uniform::{SampleUniform, SampleRange}};
 
 #[derive(Debug, Clone)]
-pub struct Random<T: Rng>(T);
+pub struct Random<T>(T);
 
 impl<T: Rng> Random<T> {
     pub fn new(rng: T) -> Self {

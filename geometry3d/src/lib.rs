@@ -321,9 +321,9 @@ impl AABB {
     /// t-values between `t_min` and `t_max`.
     ///
     /// Note that `t_min` must be strictly less than `t_max`.
-    pub fn hit(self, ray: Ray3, t_min: f64, t_max: f64) -> bool {
+    pub fn hit(self, ray: Ray3, t_range: TRange<f64>) -> bool {
         assert!(
-            t_min < t_max,
+            t_range.start < t_range.end,
             "t_min must be less than t_max for aabb hit calculation."
         );
 
@@ -343,8 +343,8 @@ impl AABB {
         let t_upper = t0.combine(t1, |x, y| x.max(y));
 
         // determine largest lower t-value, and smallest upper t-value
-        let t_min = t_lower.fold(t_min, |x, y| x.max(y));
-        let t_max = t_upper.fold(t_max, |x, y| x.min(y));
+        let t_min = t_lower.fold(t_range.start, |x, y| x.max(y));
+        let t_max = t_upper.fold(t_range.end, |x, y| x.min(y));
 
         // if the ray passes through the volume of the AABB (not just the edge)
         t_min < t_max
@@ -371,3 +371,24 @@ impl AABB {
         (self.hi - self.lo).0.reduce(|acc, x| acc * x).abs()
     }
 }
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct TRange<T>
+{
+    pub start: T,
+    pub end: T,
+}
+
+impl<T> TRange<T> 
+where
+    T: PartialOrd
+{
+    pub fn new(start: T, end: T) -> TRange<T> {
+        TRange { start, end }
+    }
+
+    pub fn contains(&self, i: &T) -> bool {
+        self.start.le(i) && self.end.ge(i)
+    }
+}
+

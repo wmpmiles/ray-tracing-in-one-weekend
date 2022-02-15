@@ -214,50 +214,50 @@ mod aabb_tests {
             time: 0.0,
         };
 
-        assert_eq!(aabb.hit(r1, 0.0, 1.0), false);
-        assert_eq!(aabb.hit(r1, 0.1, 0.9), false);
-        assert_eq!(aabb.hit(r1, 1.0, 2.0), false);
-        assert_eq!(aabb.hit(r1, -1.0, 0.0), false);
-        assert_eq!(aabb.hit(r1, -1.0, 2.0), false);
-        assert_eq!(aabb.hit(r1, -1.0, -0.5), false);
-        assert_eq!(aabb.hit(r1, 1.5, 2.0), false);
+        assert_eq!(aabb.hit(r1, TRange::new(0.0, 1.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(0.1, 0.9)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(1.0, 2.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-1.0, 0.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-1.0, 2.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-1.0, -0.5)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(1.5, 2.0)), false);
 
         r1.direction = -Vec3::e0();
-        assert_eq!(aabb.hit(r1, 0.0, 1.0), false);
-        assert_eq!(aabb.hit(r1, 0.1, 0.9), false);
-        assert_eq!(aabb.hit(r1, 1.0, 2.0), false);
-        assert_eq!(aabb.hit(r1, -1.0, 0.0), false);
-        assert_eq!(aabb.hit(r1, -2.0, 2.0), false);
-        assert_eq!(aabb.hit(r1, -1.0, -0.5), false);
-        assert_eq!(aabb.hit(r1, -2.0, -1.5), false);
+        assert_eq!(aabb.hit(r1, TRange::new(0.0, 1.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(0.1, 0.9)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(1.0, 2.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-1.0, 0.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-2.0, 2.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-1.0, -0.5)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-2.0, -1.5)), false);
 
         r1.direction = Vec3::new(1.0, 1.0, 1.0);
-        assert_eq!(aabb.hit(r1, 0.0, 1.0), true);
-        assert_eq!(aabb.hit(r1, 0.1, 0.9), true);
-        assert_eq!(aabb.hit(r1, 1.0, 2.0), false);
-        assert_eq!(aabb.hit(r1, -1.0, 0.0), false);
-        assert_eq!(aabb.hit(r1, -1.0, 2.0), true);
-        assert_eq!(aabb.hit(r1, -1.0, -0.5), false);
-        assert_eq!(aabb.hit(r1, 1.5, 2.0), false);
+        assert_eq!(aabb.hit(r1, TRange::new(0.0, 1.0)), true);
+        assert_eq!(aabb.hit(r1, TRange::new(0.1, 0.9)), true);
+        assert_eq!(aabb.hit(r1, TRange::new(1.0, 2.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-1.0, 0.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-1.0, 2.0)), true);
+        assert_eq!(aabb.hit(r1, TRange::new(-1.0, -0.5)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(1.5, 2.0)), false);
 
         r1.direction = -r1.direction;
-        assert_eq!(aabb.hit(r1, -1.0, 0.0), true);
-        assert_eq!(aabb.hit(r1, -0.9, -0.1), true);
-        assert_eq!(aabb.hit(r1, -2.0, -1.0), false);
-        assert_eq!(aabb.hit(r1, 0.0, 1.0), false);
-        assert_eq!(aabb.hit(r1, -2.0, 1.0), true);
-        assert_eq!(aabb.hit(r1, 0.5, 1.0), false);
-        assert_eq!(aabb.hit(r1, -2.0, -1.5), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-1.0, 0.0)), true);
+        assert_eq!(aabb.hit(r1, TRange::new(-0.9, -0.1)), true);
+        assert_eq!(aabb.hit(r1, TRange::new(-2.0, -1.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(0.0, 1.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-2.0, 1.0)), true);
+        assert_eq!(aabb.hit(r1, TRange::new(0.5, 1.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-2.0, -1.5)), false);
 
         r1.direction = -r1.direction;
         r1.origin = Point3::new(1.0, 0.0, 0.0);
-        assert_eq!(aabb.hit(r1, 0.0, 1.0), false);
-        assert_eq!(aabb.hit(r1, 0.1, 0.9), false);
-        assert_eq!(aabb.hit(r1, 1.0, 2.0), false);
-        assert_eq!(aabb.hit(r1, -1.0, 0.0), false);
-        assert_eq!(aabb.hit(r1, -1.0, 2.0), false);
-        assert_eq!(aabb.hit(r1, -1.0, -0.5), false);
-        assert_eq!(aabb.hit(r1, 1.5, 2.0), false);
+        assert_eq!(aabb.hit(r1, TRange::new(0.0, 1.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(0.1, 0.9)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(1.0, 2.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-1.0, 0.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-1.0, 2.0)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(-1.0, -0.5)), false);
+        assert_eq!(aabb.hit(r1, TRange::new(1.5, 2.0)), false);
     }
 
     #[test]

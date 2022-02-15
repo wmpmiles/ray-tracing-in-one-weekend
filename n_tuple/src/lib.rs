@@ -1,14 +1,8 @@
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use serde_big_array::BigArray;
+use serde::ser::{Serialize, Serializer, SerializeSeq};
+use serde::de::{Deserialize, Deserializer};
 
-pub trait TupleMember: Copy + Clone + PartialEq + Default + Serialize + DeserializeOwned {}
-impl<T: Copy + Clone + PartialEq + Default + Serialize + DeserializeOwned> TupleMember for T {}
-
-#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
-pub struct NTuple<T, const N: usize>(#[serde(with = "BigArray")] [T; N])
-where
-    T: TupleMember;
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct NTuple<T, const N: usize>([T; N]);
 
 /* Behaviours:
  * - create n-tuple with list of values
@@ -24,12 +18,11 @@ macro_rules! ntuple {
 
 impl<T, const N: usize> NTuple<T, N>
 where
-    T: TupleMember,
+    T: Copy + Clone,
 {
     pub fn map<F, U>(self, f: F) -> NTuple<U, N>
     where
         F: Fn(T) -> U,
-        U: TupleMember,
     {
         NTuple(self.0.map(f))
     }
@@ -37,7 +30,7 @@ where
     pub fn combine<F, U>(self, rhs: Self, f: F) -> NTuple<U, N>
     where
         F: Fn(T, T) -> U,
-        U: TupleMember,
+        U: Copy + Clone + Default,
     {
         let mut result: NTuple<U, N> = NTuple::default();
         for i in 0..N {
@@ -72,7 +65,7 @@ where
 
 impl<T, const N: usize> Default for NTuple<T, N>
 where
-    T: TupleMember,
+    T: Copy + Clone + Default,
 {
     fn default() -> Self {
         NTuple([T::default(); N])
@@ -80,8 +73,6 @@ where
 }
 
 impl<T, const N: usize> std::ops::Index<usize> for NTuple<T, N>
-where
-    T: TupleMember,
 {
     type Output = T;
 
@@ -91,8 +82,6 @@ where
 }
 
 impl<T, const N: usize> std::convert::From<[T; N]> for NTuple<T, N>
-where
-    T: TupleMember,
 {
     fn from(array: [T; N]) -> Self {
         NTuple(array)
@@ -101,11 +90,41 @@ where
 
 impl<T, const N: usize> std::convert::From<&[T]> for NTuple<T, N>
 where
-    T: TupleMember,
+    T: Copy + Clone,
 {
     fn from(slice: &[T]) -> Self {
         let array: [T; N] = slice.try_into().expect("Slice with incorrect length.");
         NTuple::from(array)
+    }
+}
+
+impl<T, const N: usize> Serialize for NTuple<T, N> 
+where
+    T: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(N))?;
+        for element in &self.0 {
+            seq.serialize_element(element)?;
+        }
+        seq.end()
+    }
+}
+
+impl<'de, T, const N: usize> Deserialize<'de> for NTuple<T, N> 
+where
+    T: Deserialize<'de> + Copy + Clone,
+{
+    fn deserialize<D>(deserializer: D) -> Result<NTuple<T,N>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let seq: Vec<T> = Deserialize::deserialize(deserializer)?;
+        let arr: [T; N] = seq.try_into().unwrap_or_else(|_| panic!("Fuck."));
+        Ok(NTuple::from(arr))
     }
 }
 

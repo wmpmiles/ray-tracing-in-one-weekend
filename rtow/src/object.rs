@@ -4,7 +4,6 @@ use geometry3d::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::rc::Rc;
-use std::ops::RangeInclusive;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Object {
@@ -15,21 +14,21 @@ pub enum Object {
 }
 
 impl Object {
-    pub fn hit(&mut self, ray: Ray3, t_min: f64, t_max: f64) -> Option<(HitRecord, &mut Material)> {
+    pub fn hit(&mut self, ray: Ray3, t_range: TRange<f64>) -> Option<(HitRecord, &mut Material)> {
         match self {
-            Object::Sphere(o) => o.hit(ray, t_min, t_max),
-            Object::XYRect(o) => o.hit(ray, t_min, t_max),
-            Object::List(o) => o.hit(ray, t_min, t_max),
-            Object::BVHNode(o) => o.hit(ray, t_min, t_max),
+            Object::Sphere(o) => o.hit(ray, t_range),
+            Object::XYRect(o) => o.hit(ray, t_range),
+            Object::List(o) => o.hit(ray, t_range),
+            Object::BVHNode(o) => o.hit(ray, t_range),
         }
     }
 
-    pub fn bounding_box(&self, t_min: f64, t_max: f64) -> Option<AABB> {
+    pub fn bounding_box(&self, t_range: TRange<f64>) -> Option<AABB> {
         match self {
-            Object::Sphere(o) => o.bounding_box(t_min, t_max),
-            Object::XYRect(o) => o.bounding_box(t_min, t_max),
-            Object::List(o) => o.bounding_box(t_min, t_max),
-            Object::BVHNode(o) => o.bounding_box(t_min, t_max),
+            Object::Sphere(o) => o.bounding_box(t_range),
+            Object::XYRect(o) => o.bounding_box(t_range),
+            Object::List(o) => o.bounding_box(t_range),
+            Object::BVHNode(o) => o.bounding_box(t_range),
         }
     }
 }
@@ -75,7 +74,7 @@ impl Sphere {
         (u, v)
     }
 
-    fn hit(&mut self, ray: Ray3, t_min: f64, t_max: f64) -> Option<(HitRecord, &mut Material)> {
+    fn hit(&mut self, ray: Ray3, t_range: TRange<f64>) -> Option<(HitRecord, &mut Material)> {
         let center = self.center(ray.time);
 
         let oc = ray.origin - center;
@@ -91,9 +90,9 @@ impl Sphere {
         // find the nearest root that lies in the acceptable range
         let sqrtd = delta.sqrt();
         let mut root = (-half_b - sqrtd) / a;
-        if root < t_min || t_max < root {
+        if !t_range.contains(&root) {
             root = (-half_b + sqrtd) / a;
-            if root < t_min || t_max < root {
+            if !t_range.contains(&root) {
                 return None;
             }
         }
@@ -110,11 +109,11 @@ impl Sphere {
         ))
     }
 
-    fn bounding_box(&self, time0: f64, time1: f64) -> Option<AABB> {
+    fn bounding_box(&self, t_range: TRange<f64>) -> Option<AABB> {
         let rvec = Vec3::new(self.radius, self.radius, self.radius);
 
-        let center0 = self.center(time0);
-        let center1 = self.center(time1);
+        let center0 = self.center(t_range.start);
+        let center1 = self.center(t_range.end);
 
         let box0 = AABB::new(center0 - rvec, center0 + rvec);
         let box1 = AABB::new(center1 - rvec, center1 + rvec);
@@ -145,16 +144,18 @@ impl List {
         self.objects.push(object);
     }
 
-    fn hit(&mut self, ray: Ray3, t_min: f64, t_max: f64) -> Option<(HitRecord, &mut Material)> {
+    fn hit(&mut self, ray: Ray3, t_range: TRange<f64>) -> Option<(HitRecord, &mut Material)> {
         let mut closest: Option<(HitRecord, &mut Material)> = None;
 
         for object in &mut self.objects {
             let t_max = match &closest {
-                None => t_max,
+                None => t_range.end,
                 Some((rec, _mat)) => rec.t,
             };
 
-            if let Some(hit) = object.hit(ray, t_min, t_max) {
+            let new_range = TRange { start: t_range.start, end: t_max };
+
+            if let Some(hit) = object.hit(ray, new_range) {
                 closest = Some(hit);
             }
         }
@@ -162,10 +163,10 @@ impl List {
         closest
     }
 
-    fn bounding_box(&self, time0: f64, time1: f64) -> Option<AABB> {
+    fn bounding_box(&self, t_range: TRange<f64>) -> Option<AABB> {
         let mut aabb = None;
         for object in &self.objects {
-            aabb = AABB::merge(aabb, object.bounding_box(time0, time1));
+            aabb = AABB::merge(aabb, object.bounding_box(t_range));
         }
         aabb
     }
@@ -192,23 +193,23 @@ impl From<BVHNode> for Object {
 
 impl BVHNode {
     /// Produces a Bounding Volume Hierarchy (BVH) from a `List` of `Object`.
-    pub fn from_list(olist: &mut List, time0: f64, time1: f64) -> BVHNode {
+    pub fn from_list(olist: &mut List, t_range: TRange<f64>) -> BVHNode {
         // preprocess list to remove all objects without AABBs
         let mut objects = &mut olist.objects[..];
         let mut i = 0;
         for j in 0..objects.len() {
-            if objects[j].bounding_box(time0, time1).is_none() {
+            if objects[j].bounding_box(t_range).is_none() {
                 objects.swap(i, j);
                 i += 1;
             }
         }
         objects = &mut objects[i..];
 
-        Self::from_vec(objects, time0, time1)
+        Self::from_vec(objects, t_range)
     }
 
-    fn object_lo(t0: f64, t1: f64) -> impl Fn(&Object) -> Point3 {
-        move |obj| obj.bounding_box(t0, t1).unwrap().lo()
+    fn object_lo(t_range: TRange<f64>) -> impl Fn(&Object) -> Point3 {
+        move |obj| obj.bounding_box(t_range).unwrap().lo()
     }
 
     fn axis(
@@ -229,21 +230,20 @@ impl BVHNode {
     fn lr(
         objects: &mut [Object],
         f: impl Fn(&Object) -> f64,
-        t0: f64,
-        t1: f64,
+        t_range: TRange<f64>
     ) -> (Object, Object, f64) {
         objects.sort_unstable_by(Self::cmp(f));
         let (lhs, rhs) = objects.split_at_mut(objects.len() / 2);
-        let left = Object::from(Self::from_vec(lhs, t0, t1));
-        let right = Object::from(Self::from_vec(rhs, t0, t1));
-        let vl = left.bounding_box(t0, t1).unwrap().volume();
-        let vr = right.bounding_box(t0, t1).unwrap().volume();
+        let left = Object::from(Self::from_vec(lhs, t_range));
+        let right = Object::from(Self::from_vec(rhs, t_range));
+        let vl = left.bounding_box(t_range).unwrap().volume();
+        let vr = right.bounding_box(t_range).unwrap().volume();
         let ratio = vl.max(vr) / vl.min(vr);
         (left, right, ratio)
     }
 
-    fn from_vec(objects: &mut [Object], t0: f64, t1: f64) -> BVHNode {
-        let lo = Rc::new(Self::object_lo(t0, t1));
+    fn from_vec(objects: &mut [Object], t_range: TRange<f64>) -> BVHNode {
+        let lo = Rc::new(Self::object_lo(t_range));
         let x = Self::axis(lo.clone(), |p3| p3.x());
         let y = Self::axis(lo.clone(), |p3| p3.y());
         let z = Self::axis(lo, |p3| p3.z());
@@ -257,9 +257,9 @@ impl BVHNode {
                 left.clone()
             };
         } else {
-            let (xl, xr, xratio) = Self::lr(objects, x, t0, t1);
-            let (yl, yr, yratio) = Self::lr(objects, y, t0, t1);
-            let (zl, zr, zratio) = Self::lr(objects, z, t0, t1);
+            let (xl, xr, xratio) = Self::lr(objects, x, t_range);
+            let (yl, yr, yratio) = Self::lr(objects, y, t_range);
+            let (zl, zr, zratio) = Self::lr(objects, z, t_range);
             let smallest = xratio.min(yratio.min(zratio));
             if xratio == smallest {
                 left = xl;
@@ -273,8 +273,8 @@ impl BVHNode {
             }
         }
 
-        let left_aabb = left.bounding_box(t0, t1).unwrap();
-        let right_aabb = right.bounding_box(t0, t1).unwrap();
+        let left_aabb = left.bounding_box(t_range).unwrap();
+        let right_aabb = right.bounding_box(t_range).unwrap();
         let aabb = AABB::merge(Some(left_aabb), Some(right_aabb)).unwrap();
 
         let left = Box::new(left);
@@ -283,23 +283,24 @@ impl BVHNode {
         BVHNode { aabb, left, right }
     }
 
-    fn bounding_box(&self, _time0: f64, _time1: f64) -> Option<AABB> {
+    fn bounding_box(&self, _t_range: TRange<f64>) -> Option<AABB> {
         Some(self.aabb)
     }
 
-    fn hit(&mut self, ray_in: Ray3, t_min: f64, t_max: f64) -> Option<(HitRecord, &mut Material)> {
-        if !self.aabb.hit(ray_in, t_min, t_max) {
+    fn hit(&mut self, ray_in: Ray3, t_range: TRange<f64>) -> Option<(HitRecord, &mut Material)> {
+        if !self.aabb.hit(ray_in, t_range) {
             return None;
         }
 
-        if let Some((hit_l, mat_l)) = self.left.hit(ray_in, t_min, t_max) {
-            if let Some((hit_r, mat_r)) = self.right.hit(ray_in, t_min, hit_l.t) {
+        if let Some((hit_l, mat_l)) = self.left.hit(ray_in, t_range) {
+            let new_range = TRange { start: t_range.start, end: hit_l.t };
+            if let Some((hit_r, mat_r)) = self.right.hit(ray_in, new_range) {
                 Some((hit_r, mat_r))
             } else {
                 Some((hit_l, mat_l))
             }
         } else {
-            self.right.hit(ray_in, t_min, t_max)
+            self.right.hit(ray_in, t_range)
         }
     }
 }
@@ -307,15 +308,15 @@ impl BVHNode {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct XYRect {
     material: Material,
-    x: RangeInclusive<f64>,
-    y: RangeInclusive<f64>,
+    x: TRange<f64>,
+    y: TRange<f64>,
     z: f64,
 }
 
 impl XYRect {
-    fn hit(&mut self, ray_in: Ray3, t_min: f64, t_max: f64) -> Option<(HitRecord, &mut Material)> {
+    fn hit(&mut self, ray_in: Ray3, t_range: TRange<f64>) -> Option<(HitRecord, &mut Material)> {
         let t = (self.z - ray_in.origin.z()) / ray_in.direction.z();
-        if t < t_min || t > t_max {
+        if !t_range.contains(&t) {
             return None;
         }
 
@@ -324,16 +325,16 @@ impl XYRect {
             return None;
         }
 
-        let u = (p.x() - self.x.start()) / (self.x.end() - self.x.start());
-        let v = (p.y() - self.y.start()) / (self.y.end() - self.y.start());
+        let u = (p.x() - self.x.start) / (self.x.end - self.x.start);
+        let v = (p.y() - self.y.start) / (self.y.end - self.y.start);
         let outward_normal = Vec3::new(0.0, 0.0, 1.0);
 
         Some((HitRecord::new(p, outward_normal, ray_in, t, u, v), &mut self.material))
     }
 
-    fn bounding_box(&self, _time0: f64, _time1: f64) -> Option<AABB> {
-        let lower = Point3::new(*self.x.start(), *self.y.start(), self.z - f64::EPSILON);
-        let upper = Point3::new(*self.x.end(), *self.y.end(), self.z + f64::EPSILON);
+    fn bounding_box(&self, _t_range: TRange<f64>) -> Option<AABB> {
+        let lower = Point3::new(self.x.start, self.y.start, self.z - f64::EPSILON);
+        let upper = Point3::new(self.x.end, self.y.end, self.z + f64::EPSILON);
         Some(AABB::new(lower, upper))
     }
 
