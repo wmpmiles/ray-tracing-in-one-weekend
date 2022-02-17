@@ -2,7 +2,7 @@ use crate::color::FloatRgb;
 use crate::hit_record::HitRecord;
 use crate::perlin::Perlin;
 use geometry3d::*;
-use n_tuple::NTuple;
+use ntuple::NTuple;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 

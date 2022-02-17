@@ -1,6 +1,6 @@
 use crate::random::Random;
 use geometry3d::*;
-use n_tuple::*;
+use ntuple::*;
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 

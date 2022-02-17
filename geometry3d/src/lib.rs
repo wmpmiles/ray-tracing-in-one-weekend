@@ -10,7 +10,8 @@
 //! approximations and as such will potentially have small errors and will
 //! display numeric instability in some cases.
 
-use n_tuple::*;
+use ntuple::*;
+use ntuple_derive::*;
 use serde::{Serialize, Deserialize};
 
 /// 3D Euclidean vector.
@@ -27,7 +28,7 @@ use serde::{Serialize, Deserialize};
 ///
 /// `e0()` through `e2()` are the standard basis vectors.
 ///
-#[derive(Debug, PartialEq, Copy, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Copy, Clone, Default, Serialize, Deserialize, NTupleNewtype)]
 pub struct Vec3(NTuple<f64, 3>);
 
 impl Vec3 {
@@ -117,18 +118,6 @@ impl Vec3 {
     }
 }
 
-impl std::convert::From<Vec3> for NTuple<f64, 3> {
-    fn from(v: Vec3) -> Self {
-        v.0
-    }
-}
-
-impl std::convert::From<NTuple<f64, 3>> for Vec3 {
-    fn from(n: NTuple<f64, 3>) -> Self {
-        Vec3(n)
-    }
-}
-
 /// Sum of two vectors.
 impl std::ops::Add for Vec3 {
     type Output = Vec3;
@@ -192,7 +181,7 @@ impl std::convert::From<Point3> for Vec3 {
 ///
 /// assert_eq!(p1 - p2, difference);
 /// ```
-#[derive(Debug, PartialEq, Copy, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Copy, Clone, Default, Serialize, Deserialize, NTupleNewtype)]
 pub struct Point3(NTuple<f64, 3>);
 
 impl Point3 {
@@ -214,18 +203,6 @@ impl Point3 {
     /// The z coordinate.
     pub fn z(self) -> f64 {
         self.0[2]
-    }
-}
-
-impl std::convert::From<Point3> for NTuple<f64, 3> {
-    fn from(p: Point3) -> Self {
-        p.0
-    }
-}
-
-impl std::convert::From<NTuple<f64, 3>> for Point3 {
-    fn from(n: NTuple<f64, 3>) -> Self {
-        Point3(n)
     }
 }
 

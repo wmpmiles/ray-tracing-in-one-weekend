@@ -6,10 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+ntuple = { path = "../ntuple" }
+ntuple_derive = { path = "../ntuple_derive" }
+geometry3d = { path = "../geometry3d" }
 rand = "0.8.0"
 png = "0.17.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-geometry3d = { path = "../geometry3d" }
-n_tuple = { path = "../n_tuple" }
 

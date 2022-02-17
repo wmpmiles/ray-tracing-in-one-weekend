@@ -2,7 +2,8 @@
 
 members = [
     "rtow",
-    "n_tuple",
+    "ntuple",
+    "ntuple_derive",
     "geometry3d"
 ]
 

@@ -1,11 +1,8 @@
-use n_tuple::*;
+use ntuple::*;
+use ntuple_derive::*;
 use serde::{Serialize, Deserialize};
 
-/* Behaviours:
- * - Create and access r, g, b
- * - From FloatRgb
- */
-#[derive(Copy, Clone, Default, PartialEq, Debug)]
+#[derive(Copy, Clone, Default, PartialEq, Debug, NTupleNewtype)]
 pub struct Rgb(NTuple<u8, 3>);
 
 impl Rgb {
@@ -36,7 +33,7 @@ impl std::convert::From<FloatRgb> for Rgb {
  * - Create and access r, g, b
  * - Multiply by scalar or vector attenuation values
  */
-#[derive(Copy, Clone, Default, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Default, PartialEq, Debug, Serialize, Deserialize, NTupleNewtype)]
 pub struct FloatRgb(NTuple<f64, 3>);
 
 impl FloatRgb {
@@ -67,12 +64,6 @@ impl std::ops::Add<FloatRgb> for FloatRgb {
 
     fn add(self, rhs: Self) -> Self::Output {
         Self(self.0.combine(rhs.0, |x, y| x + y))
-    }
-}
-
-impl std::convert::From<NTuple<f64, 3>> for FloatRgb {
-    fn from(ntuple: NTuple<f64,3>) -> Self {
-        FloatRgb(ntuple)
     }
 }
 
