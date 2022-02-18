@@ -14,6 +14,27 @@ use ntuple::*;
 use ntuple_derive::*;
 use serde::{Serialize, Deserialize};
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum Axis {
+    X = 0,
+    Y = 1,
+    Z = 2,
+}
+
+pub trait Permute {
+    fn permute(self, axes: [Axis; 3]) -> Self;
+}
+
+impl<T> Permute for T
+where
+    T: NTupleNewtype<f64, 3>
+{
+    fn permute(self, axes: [Axis; 3]) -> T {
+        let perms = axes.map(|x| x as usize);
+        T::from(self.ntuple().permute(perms))
+    }
+}
+
 /// 3D Euclidean vector.
 ///
 /// # Examples

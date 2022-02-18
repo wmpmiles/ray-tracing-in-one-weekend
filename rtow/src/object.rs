@@ -8,7 +8,7 @@ use std::rc::Rc;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Object {
     Sphere(Sphere),
-    XYRect(XYRect),
+    Rect(Rect),
     List(List),
     BVHNode(BVHNode),
 }
@@ -17,7 +17,7 @@ impl Object {
     pub fn hit(&mut self, ray: Ray3, t_range: TRange<f64>) -> Option<(HitRecord, &mut Material)> {
         match self {
             Object::Sphere(o) => o.hit(ray, t_range),
-            Object::XYRect(o) => o.hit(ray, t_range),
+            Object::Rect(o) => o.hit(ray, t_range),
             Object::List(o) => o.hit(ray, t_range),
             Object::BVHNode(o) => o.hit(ray, t_range),
         }
@@ -26,7 +26,7 @@ impl Object {
     pub fn bounding_box(&self, t_range: TRange<f64>) -> Option<AABB> {
         match self {
             Object::Sphere(o) => o.bounding_box(t_range),
-            Object::XYRect(o) => o.bounding_box(t_range),
+            Object::Rect(o) => o.bounding_box(t_range),
             Object::List(o) => o.bounding_box(t_range),
             Object::BVHNode(o) => o.bounding_box(t_range),
         }
@@ -306,15 +306,25 @@ impl BVHNode {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct XYRect {
+pub struct Rect {
     material: Material,
-    x: TRange<f64>,
-    y: TRange<f64>,
-    z: f64,
+    a1: TRange<f64>,
+    a2: TRange<f64>,
+    a3: f64,
+    axes: [Axis; 3],
 }
 
-impl XYRect {
+impl Rect {
+    fn permute(&self, ray_in: Ray3) -> Ray3 {
+        let origin = ray_in.origin.permute(self.permutation);
+        let direction = ray_in.direction.permute(self.permutation);
+        let time = ray_in.time;
+        Ray3 { origin, direction, time }
+    }
+
     fn hit(&mut self, ray_in: Ray3, t_range: TRange<f64>) -> Option<(HitRecord, &mut Material)> {
+        let ray_in = self.permute(ray_in);
+
         let t = (self.z - ray_in.origin.z()) / ray_in.direction.z();
         if !t_range.contains(&t) {
             return None;
@@ -337,6 +347,5 @@ impl XYRect {
         let upper = Point3::new(self.x.end, self.y.end, self.z + f64::EPSILON);
         Some(AABB::new(lower, upper))
     }
-
 }
 

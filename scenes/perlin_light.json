@@ -27,7 +27,7 @@
     "time_max": 1.0
   },
   "sampler": {
-    "n": 20,
+    "n": 5,
     "max_depth": 50
   },
   "background_color": [
@@ -38,16 +38,21 @@
   "scene_list": {
     "objects": [
       {
-        "XYRect": {
-          "x": {
+        "Rect": {
+          "permutation": [
+              "X",
+              "Y",
+              "Z"
+          ],
+          "a1": {
             "start": 3.0,
             "end": 5.0
           },
-          "y": {
+          "a2": {
             "start": 1.0,
             "end": 3.0
           },
-          "z": -2.0,
+          "a3": -2.0,
           "material": {
             "DiffuseLight": {
               "emit": {

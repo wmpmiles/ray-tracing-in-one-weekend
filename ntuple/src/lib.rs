@@ -4,7 +4,7 @@ use serde::ser::{Serialize, SerializeSeq, Serializer};
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct NTuple<T, const N: usize>([T; N]);
 
-pub trait NTupleNewtype<T, const N: usize> {
+pub trait NTupleNewtype<T, const N: usize>: From<NTuple<T, N>> {
     fn ntuple(&self) -> NTuple<T, N>;
 }
 
