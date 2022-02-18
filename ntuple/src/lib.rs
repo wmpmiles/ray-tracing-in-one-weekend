@@ -59,6 +59,14 @@ where
         }
         acc
     }
+
+    pub fn permute(self, perms: [usize; N]) -> NTuple<T,N> {
+        let mut arr = [T::default(); N];
+        for i in 0..N {
+            arr[i] = self[perms[i]];
+        }
+        NTuple::from(arr)
+    }
 }
 
 impl<T, const N: usize> Default for NTuple<T, N>

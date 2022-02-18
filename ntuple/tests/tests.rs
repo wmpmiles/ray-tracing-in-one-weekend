@@ -55,5 +55,23 @@ mod tests {
         let t_de: NTuple<i32, 3> = serde_json::from_str(&s).unwrap();
         assert_eq!(t_de, t);
     }
+
+    #[test]
+    fn permute() {
+        let t0 = ntuple!(1, 2, 4, 8, 16);
+        let p = [4, 3, 2, 1, 0];
+        let t1 = t0.permute(p);
+        assert_ne!(t0, t1);
+        let t2 = t1.permute(p);
+        assert_eq!(t0, t2);
+    }
+
+    #[test]
+    #[should_panic]
+    fn bad_permute() {
+        let t0 = ntuple!(0);
+        let p = [1];
+        let t2 = t0.permute(p);
+    }
 }
 
