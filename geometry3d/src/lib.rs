@@ -380,7 +380,7 @@ impl AABB {
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 pub struct TRange<T> {
     pub start: T,
     pub end: T,

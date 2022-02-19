@@ -12,6 +12,7 @@ pub enum Object {
     XYRect(XYRect),
     XZRect(XZRect),
     YZRect(YZRect),
+    RectPrism(RectPrism),
     List(List),
     BVHNode(BVHNode),
 }
@@ -23,6 +24,7 @@ impl Object {
             Object::XYRect(o) => o.hit(ray, t_range),
             Object::XZRect(o) => o.hit(ray, t_range),
             Object::YZRect(o) => o.hit(ray, t_range),
+            Object::RectPrism(o) => o.hit(ray, t_range),
             Object::List(o) => o.hit(ray, t_range),
             Object::BVHNode(o) => o.hit(ray, t_range),
         }
@@ -34,6 +36,7 @@ impl Object {
             Object::XYRect(o) => o.bounding_box(t_range),
             Object::XZRect(o) => o.bounding_box(t_range),
             Object::YZRect(o) => o.bounding_box(t_range),
+            Object::RectPrism(o) => o.bounding_box(t_range),
             Object::List(o) => o.bounding_box(t_range),
             Object::BVHNode(o) => o.bounding_box(t_range),
         }
@@ -362,8 +365,15 @@ macro_rules! rect {
                 let axes = [Axis::$X, Axis::$Y, Axis::$Z];
                 let lower =
                     Point3::new(self.$x.start, self.$y.start, self.$z - epsilon).unpermute(axes);
-                let upper = Point3::new(self.$x.end, self.$y.end, self.$z + epsilon).unpermute(axes);
+                let upper =
+                    Point3::new(self.$x.end, self.$y.end, self.$z + epsilon).unpermute(axes);
                 Some(AABB::new(lower, upper))
+            }
+        }
+
+        impl From<$name> for Object {
+            fn from(r: $name) -> Object {
+                Object::$name(r)
             }
         }
     };
@@ -373,3 +383,71 @@ rect!(x, y, z, X, Y, Z, XYRect);
 rect!(x, z, y, X, Z, Y, XZRect);
 rect!(y, z, x, Y, Z, X, YZRect);
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RectPrismU {
+    material: Material,
+    p0: Point3,
+    p1: Point3,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RectPrismI {
+    sides: BVHNode,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RectPrism {
+    U(RectPrismU),
+    I(RectPrismI),
+}
+
+impl RectPrism {
+    fn init(&mut self) -> &mut RectPrismI {
+        match self {
+            RectPrism::U(u) => {
+                let i = Self::_init(u);
+                *self = RectPrism::I(i);
+                if let RectPrism::I(i) = self {
+                    i
+                } else {
+                    panic!("Unreachable?")
+                }
+            },
+            RectPrism::I(i) => i,
+        }
+    }
+
+    fn _init(u: &RectPrismU) -> RectPrismI {
+        let aabb = AABB::new(u.p0, u.p1);
+        let min = NTuple::from(aabb.lo());
+        let max = NTuple::from(aabb.hi());
+
+        let mut list = List::new();
+        let material = &u.material;
+        let r = min.combine(max, |x, y| TRange { start: x, end: y });
+
+        list.add(XYRect { material: material.clone(), x: r[0], y: r[1], z: min[2] }.into());
+        list.add(XYRect { material: material.clone(), x: r[0], y: r[1], z: max[2] }.into());
+
+        list.add(XZRect { material: material.clone(), x: r[0], z: r[2], y: min[1] }.into());
+        list.add(XZRect { material: material.clone(), x: r[0], z: r[2], y: max[1] }.into());
+
+        list.add(YZRect { material: material.clone(), y: r[1], z: r[2], x: min[0] }.into());
+        list.add(YZRect { material: material.clone(), y: r[1], z: r[2], x: max[0] }.into());
+
+        let sides = BVHNode::from_list(&mut list, TRange::new(0.0, 0.0));
+        RectPrismI { sides }
+    }
+
+    fn hit(&mut self, ray_in: Ray3, t_range: TRange<f64>) -> Option<(HitRecord, &mut Material)> {
+        let i = self.init();
+        i.sides.hit(ray_in, t_range)
+    }
+
+    fn bounding_box(&self, _t_range: TRange<f64>) -> Option<AABB> {
+        match self {
+            RectPrism::U(u) => Some(AABB::new(u.p0, u.p1)),
+            RectPrism::I(i) => Some(i.sides.aabb),
+        }
+    }
+}
