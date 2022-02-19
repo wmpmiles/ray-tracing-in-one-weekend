@@ -153,7 +153,10 @@ impl List {
                 Some((rec, _mat)) => rec.t,
             };
 
-            let new_range = TRange { start: t_range.start, end: t_max };
+            let new_range = TRange {
+                start: t_range.start,
+                end: t_max,
+            };
 
             if let Some(hit) = object.hit(ray, new_range) {
                 closest = Some(hit);
@@ -230,7 +233,7 @@ impl BVHNode {
     fn lr(
         objects: &mut [Object],
         f: impl Fn(&Object) -> f64,
-        t_range: TRange<f64>
+        t_range: TRange<f64>,
     ) -> (Object, Object, f64) {
         objects.sort_unstable_by(Self::cmp(f));
         let (lhs, rhs) = objects.split_at_mut(objects.len() / 2);
@@ -293,7 +296,10 @@ impl BVHNode {
         }
 
         if let Some((hit_l, mat_l)) = self.left.hit(ray_in, t_range) {
-            let new_range = TRange { start: t_range.start, end: hit_l.t };
+            let new_range = TRange {
+                start: t_range.start,
+                end: hit_l.t,
+            };
             if let Some((hit_r, mat_r)) = self.right.hit(ray_in, new_range) {
                 Some((hit_r, mat_r))
             } else {
@@ -316,36 +322,46 @@ pub struct Rect {
 
 impl Rect {
     fn permute(&self, ray_in: Ray3) -> Ray3 {
-        let origin = ray_in.origin.permute(self.permutation);
-        let direction = ray_in.direction.permute(self.permutation);
+        let origin = ray_in.origin.permute(self.axes);
+        let direction = ray_in.direction.permute(self.axes);
         let time = ray_in.time;
-        Ray3 { origin, direction, time }
+        Ray3 {
+            origin,
+            direction,
+            time,
+        }
     }
 
     fn hit(&mut self, ray_in: Ray3, t_range: TRange<f64>) -> Option<(HitRecord, &mut Material)> {
-        let ray_in = self.permute(ray_in);
+        let ray = self.permute(ray_in);
 
-        let t = (self.z - ray_in.origin.z()) / ray_in.direction.z();
+        let t = (self.a3 - ray.origin.z()) / ray.direction.z();
         if !t_range.contains(&t) {
             return None;
         }
 
-        let p = ray_in.at(t);
-        if !self.x.contains(&p.x()) || !self.y.contains(&p.y()) {
+        let p = ray.at(t);
+        if !self.a1.contains(&p.x()) || !self.a2.contains(&p.y()) {
             return None;
         }
 
-        let u = (p.x() - self.x.start) / (self.x.end - self.x.start);
-        let v = (p.y() - self.y.start) / (self.y.end - self.y.start);
-        let outward_normal = Vec3::new(0.0, 0.0, 1.0);
+        let u = (p.x() - self.a1.start) / (self.a1.end - self.a1.start);
+        let v = (p.y() - self.a2.start) / (self.a2.end - self.a2.start);
 
-        Some((HitRecord::new(p, outward_normal, ray_in, t, u, v), &mut self.material))
+        let p = p.unpermute(self.axes);
+        let outward_normal = Vec3::new(0.0, 0.0, -ray.direction.z().signum()).unpermute(self.axes);
+
+        Some((
+            HitRecord::new(p, outward_normal, ray_in, t, u, v),
+            &mut self.material,
+        ))
     }
 
     fn bounding_box(&self, _t_range: TRange<f64>) -> Option<AABB> {
-        let lower = Point3::new(self.x.start, self.y.start, self.z - f64::EPSILON);
-        let upper = Point3::new(self.x.end, self.y.end, self.z + f64::EPSILON);
+        let epsilon = 1.0;
+        let lower =
+            Point3::new(self.a1.start, self.a2.start, self.a3 - epsilon).unpermute(self.axes);
+        let upper = Point3::new(self.a1.end, self.a2.end, self.a3 + epsilon).unpermute(self.axes);
         Some(AABB::new(lower, upper))
     }
 }
-

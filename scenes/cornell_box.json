@@ -1,0 +1,216 @@
+{
+  "image": {
+    "filename": "cornell_box_render.png",
+    "width": 600,
+    "height": 600
+  },
+  "camera": {
+    "look_from": [
+      277.5,
+      277.5,
+      -800.0
+    ],
+    "look_at": [
+      277.5,
+      277.5,
+      0.0
+    ],
+    "up": [
+      0.0,
+      1.0,
+      0.0
+    ],
+    "vertical_fov": 40.0,
+    "aperture": 0.0,
+    "focus_distance": 10.0,
+    "time_min": 0.0,
+    "time_max": 1.0
+  },
+  "sampler": {
+    "n": 14,
+    "max_depth": 50
+  },
+  "background_color": [
+      0.0,
+      0.0,
+      0.0
+  ],
+  "scene_list": {
+    "objects": [
+      {
+        "Rect": {
+          "axes": [
+              "X",
+              "Z",
+              "Y"
+          ],
+          "a1": {
+            "start": 213.0,
+            "end": 343.0
+          },
+          "a2": {
+            "start": 227.0,
+            "end": 332.0
+          },
+          "a3": 554.0,
+          "material": {
+            "DiffuseLight": {
+              "emit": {
+                "SolidColor": [
+                  15.0,
+                  15.0,
+                  15.0
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "Rect": {
+          "axes": [
+              "Y",
+              "Z",
+              "X"
+          ],
+          "a1": {
+            "start": 0.0,
+            "end": 555.0
+          },
+          "a2": {
+            "start": 0.0,
+            "end": 555.0
+          },
+          "a3": 555.0,
+          "material": {
+            "Lambertian": {
+              "albedo": {
+                "SolidColor": [
+                  0.12,
+                  0.45,
+                  0.15
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "Rect": {
+          "axes": [
+              "Y",
+              "Z",
+              "X"
+          ],
+          "a1": {
+            "start": 0.0,
+            "end": 555.0
+          },
+          "a2": {
+            "start": 0.0,
+            "end": 555.0
+          },
+          "a3": 0.0,
+          "material": {
+            "Lambertian": {
+              "albedo": {
+                "SolidColor": [
+                  0.65,
+                  0.05,
+                  0.05
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "Rect": {
+          "axes": [
+              "X",
+              "Z",
+              "Y"
+          ],
+          "a1": {
+            "start": 0.0,
+            "end": 555.0
+          },
+          "a2": {
+            "start": 0.0,
+            "end": 555.0
+          },
+          "a3": 0.0,
+          "material": {
+            "Lambertian": {
+              "albedo": {
+                "SolidColor": [
+                  0.73,
+                  0.73,
+                  0.73
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "Rect": {
+          "axes": [
+              "X",
+              "Z",
+              "Y"
+          ],
+          "a1": {
+            "start": 0.0,
+            "end": 555.0
+          },
+          "a2": {
+            "start": 0.0,
+            "end": 555.0
+          },
+          "a3": 555.0,
+          "material": {
+            "Lambertian": {
+              "albedo": {
+                "SolidColor": [
+                  0.73,
+                  0.73,
+                  0.73
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "Rect": {
+          "axes": [
+              "X",
+              "Y",
+              "Z"
+          ],
+          "a1": {
+            "start": 0.0,
+            "end": 555.0
+          },
+          "a2": {
+            "start": 0.0,
+            "end": 555.0
+          },
+          "a3": 555.0,
+          "material": {
+            "Lambertian": {
+              "albedo": {
+                "SolidColor": [
+                  0.73,
+                  0.73,
+                  0.73
+                ]
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

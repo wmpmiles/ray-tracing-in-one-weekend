@@ -12,7 +12,7 @@
 
 use ntuple::*;
 use ntuple_derive::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Axis {
@@ -23,15 +23,25 @@ pub enum Axis {
 
 pub trait Permute {
     fn permute(self, axes: [Axis; 3]) -> Self;
+    fn unpermute(self, axes: [Axis; 3]) -> Self;
 }
 
 impl<T> Permute for T
 where
-    T: NTupleNewtype<f64, 3>
+    T: NTupleNewtype<f64, 3>,
 {
     fn permute(self, axes: [Axis; 3]) -> T {
         let perms = axes.map(|x| x as usize);
         T::from(self.ntuple().permute(perms))
+    }
+
+    fn unpermute(self, axes: [Axis; 3]) -> T {
+        let perms = axes.map(|x| x as usize);
+        let mut unperm = perms;
+        for i in 0..3 {
+            unperm[perms[i]] = i;
+        }
+        T::from(self.ntuple().permute(unperm))
     }
 }
 
@@ -291,8 +301,8 @@ impl AABB {
 
     pub fn new(a: Point3, b: Point3) -> AABB {
         assert!(
-            a.0.combine(b.0, | x, y | x != y).reduce(|acc, x| acc && x),
-            "AABB extents must have a non-zero distance in all 3 dimensions."
+            a.0.combine(b.0, |x, y| x != y).reduce(|acc, x| acc && x),
+            "AABB extents must have a non-zero distance in all 3 dimensions.\n{a:?}\n{b:?}"
         );
         let lo = Self::pmin(a, b);
         let hi = Self::pmax(a, b);
@@ -371,15 +381,14 @@ impl AABB {
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct TRange<T>
-{
+pub struct TRange<T> {
     pub start: T,
     pub end: T,
 }
 
-impl<T> TRange<T> 
+impl<T> TRange<T>
 where
-    T: PartialOrd
+    T: PartialOrd,
 {
     pub fn new(start: T, end: T) -> TRange<T> {
         TRange { start, end }
@@ -389,4 +398,3 @@ where
         self.start.le(i) && self.end.ge(i)
     }
 }
-
