@@ -1,6 +1,7 @@
 use crate::hit_record::HitRecord;
 use crate::material::Material;
 use geometry3d::*;
+use ntuple::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::rc::Rc;
@@ -8,7 +9,9 @@ use std::rc::Rc;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Object {
     Sphere(Sphere),
-    Rect(Rect),
+    XYRect(XYRect),
+    XZRect(XZRect),
+    YZRect(YZRect),
     List(List),
     BVHNode(BVHNode),
 }
@@ -17,7 +20,9 @@ impl Object {
     pub fn hit(&mut self, ray: Ray3, t_range: TRange<f64>) -> Option<(HitRecord, &mut Material)> {
         match self {
             Object::Sphere(o) => o.hit(ray, t_range),
-            Object::Rect(o) => o.hit(ray, t_range),
+            Object::XYRect(o) => o.hit(ray, t_range),
+            Object::XZRect(o) => o.hit(ray, t_range),
+            Object::YZRect(o) => o.hit(ray, t_range),
             Object::List(o) => o.hit(ray, t_range),
             Object::BVHNode(o) => o.hit(ray, t_range),
         }
@@ -26,7 +31,9 @@ impl Object {
     pub fn bounding_box(&self, t_range: TRange<f64>) -> Option<AABB> {
         match self {
             Object::Sphere(o) => o.bounding_box(t_range),
-            Object::Rect(o) => o.bounding_box(t_range),
+            Object::XYRect(o) => o.bounding_box(t_range),
+            Object::XZRect(o) => o.bounding_box(t_range),
+            Object::YZRect(o) => o.bounding_box(t_range),
             Object::List(o) => o.bounding_box(t_range),
             Object::BVHNode(o) => o.bounding_box(t_range),
         }
@@ -311,57 +318,58 @@ impl BVHNode {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Rect {
-    material: Material,
-    a1: TRange<f64>,
-    a2: TRange<f64>,
-    a3: f64,
-    axes: [Axis; 3],
+macro_rules! rect {
+    ( $x:ident, $y:ident, $z:ident, $X:ident, $Y:ident, $Z:ident, $name:ident) => {
+        #[derive(Debug, Clone, Serialize, Deserialize)]
+        pub struct $name {
+            material: Material,
+            $x: TRange<f64>,
+            $y: TRange<f64>,
+            $z: f64,
+        }
+
+        impl $name {
+            fn hit(
+                &mut self,
+                ray_in: Ray3,
+                t_range: TRange<f64>,
+            ) -> Option<(HitRecord, &mut Material)> {
+                let t = (self.$z - ray_in.origin.$z()) / ray_in.direction.$z();
+                if !t_range.contains(&t) {
+                    return None;
+                }
+
+                let p = ray_in.at(t);
+                if !self.$x.contains(&p.$x()) || !self.$y.contains(&p.$y()) {
+                    return None;
+                }
+
+                let u = (p.$x() - self.$x.start) / (self.$x.end - self.$x.start);
+                let v = (p.$y() - self.$y.start) / (self.$y.end - self.$y.start);
+
+                let mut outward_normal = [0.0; 3];
+                outward_normal[Axis::$Z as usize] = -ray_in.direction.$z().signum();
+                let outward_normal = Vec3::from(NTuple::from(outward_normal));
+
+                Some((
+                    HitRecord::new(p, outward_normal, ray_in, t, u, v),
+                    &mut self.material,
+                ))
+            }
+
+            fn bounding_box(&self, _t_range: TRange<f64>) -> Option<AABB> {
+                let epsilon = 1.0;
+                let axes = [Axis::$X, Axis::$Y, Axis::$Z];
+                let lower =
+                    Point3::new(self.$x.start, self.$y.start, self.$z - epsilon).unpermute(axes);
+                let upper = Point3::new(self.$x.end, self.$y.end, self.$z + epsilon).unpermute(axes);
+                Some(AABB::new(lower, upper))
+            }
+        }
+    };
 }
 
-impl Rect {
-    fn permute(&self, ray_in: Ray3) -> Ray3 {
-        let origin = ray_in.origin.permute(self.axes);
-        let direction = ray_in.direction.permute(self.axes);
-        let time = ray_in.time;
-        Ray3 {
-            origin,
-            direction,
-            time,
-        }
-    }
+rect!(x, y, z, X, Y, Z, XYRect);
+rect!(x, z, y, X, Z, Y, XZRect);
+rect!(y, z, x, Y, Z, X, YZRect);
 
-    fn hit(&mut self, ray_in: Ray3, t_range: TRange<f64>) -> Option<(HitRecord, &mut Material)> {
-        let ray = self.permute(ray_in);
-
-        let t = (self.a3 - ray.origin.z()) / ray.direction.z();
-        if !t_range.contains(&t) {
-            return None;
-        }
-
-        let p = ray.at(t);
-        if !self.a1.contains(&p.x()) || !self.a2.contains(&p.y()) {
-            return None;
-        }
-
-        let u = (p.x() - self.a1.start) / (self.a1.end - self.a1.start);
-        let v = (p.y() - self.a2.start) / (self.a2.end - self.a2.start);
-
-        let p = p.unpermute(self.axes);
-        let outward_normal = Vec3::new(0.0, 0.0, -ray.direction.z().signum()).unpermute(self.axes);
-
-        Some((
-            HitRecord::new(p, outward_normal, ray_in, t, u, v),
-            &mut self.material,
-        ))
-    }
-
-    fn bounding_box(&self, _t_range: TRange<f64>) -> Option<AABB> {
-        let epsilon = 1.0;
-        let lower =
-            Point3::new(self.a1.start, self.a2.start, self.a3 - epsilon).unpermute(self.axes);
-        let upper = Point3::new(self.a1.end, self.a2.end, self.a3 + epsilon).unpermute(self.axes);
-        Some(AABB::new(lower, upper))
-    }
-}
